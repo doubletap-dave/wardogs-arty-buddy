@@ -1,0 +1,7 @@
+[package]
+name = "wardogs-arty-buddy"
+version = "0.1.0"
+edition = "2024"
+description = "Map-coordinate range calculator. Pythagorean distance times 100, in meters."
+
+[dependencies]
