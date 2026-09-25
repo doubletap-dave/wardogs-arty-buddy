@@ -6,6 +6,19 @@ Range in meters between two map points.
 meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
 
+## Download
+
+Current release: **[v0.3.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.3.0)**
+
+- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.3.0/wardogs-arty-buddy-windows-x86_64.exe)
+- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.3.0/wardogs-arty-buddy-linux-x86_64)
+
+Older builds are on the [releases page](https://github.com/doubletap-dave/wardogs-arty-buddy/releases).
+
+Windows may show SmartScreen the first time you open the download. Choose **More info**, then **Run anyway**.
+
+The Linux build is made on Ubuntu 22.04. It needs Vulkan plus the usual X11 or Wayland libraries (`libvulkan1`, `libxkbcommon0`, `libxcb1`).
+
 ## How to use
 
 The app is one small window. It opens transparent and stays above other windows, so you can leave it over the game. The colored squares change the ink.
@@ -22,20 +35,11 @@ It watches the clipboard.
 
 A copied point looks like `x12.34, y56.78`. After the board accepts it, the clipboard is cleared, so a missed copy does not apply the same point twice. Copy the next point with Ctrl+A, Ctrl+C.
 
-From a source checkout:
+## From source
 
 ```
 cargo run
 ```
-
-## Downloads
-
-Tagged releases attach two builds:
-
-- `wardogs-arty-buddy-windows-x86_64.exe`
-- `wardogs-arty-buddy-linux-x86_64`
-
-The Linux build is made on Ubuntu 22.04. It needs Vulkan plus the usual X11 or Wayland libraries (`libvulkan1`, `libxkbcommon0`, `libxcb1`).
 
 Release builds run only when a `v*` tag is pushed. Every push to `main` still runs the tests.
 
