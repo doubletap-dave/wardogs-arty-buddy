@@ -12,11 +12,9 @@ meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 cargo run
 ```
 
-A window opens. Enter your X and Y, then the target X and Y. The range updates as you type. Clear board wipes the four fields.
+Copy a Wardogs point (`x12.34, y56.78`) and the window picks it up. The first copy is your station and stays there. Every copy after that moves the target and updates the range. Each copy is cleared off the clipboard so a missed copy does not reuse the old point. Clear board unlocks your station, and the next copy sets it again.
 
-A Wardogs copy pastes into either box of a station: `x12.34, y56.78`. One to three digits before the decimal, two after. Plain numbers still work.
-
-GAME shrinks the board, keeps it above other windows, and makes the plate translucent so the game shows through. Pick GREEN, RED, BLUE, WHITE, or AMBER. PASS CLICKS lets the mouse fall through to the game. Alt+Tab back to this window and press Esc to take the mouse again. BOARD returns to the full layout.
+GAME shrinks the board, keeps it above the game, and makes it translucent. The colored squares switch the ink. CLEAR resets your station. BACK returns to the full window.
 
 ## Downloads
 

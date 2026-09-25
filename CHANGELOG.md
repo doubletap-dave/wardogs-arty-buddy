@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 - 2026-09-25
+
+### Features
+
+- Read a Wardogs copy from the clipboard. The first copy locks your station, later copies move only the target, and the clipboard is cleared
+- Compact game overlay with clickable color squares
+
+### Fixes
+
+- Center the range on the hairline and show it as 500m
+
 ## 0.2.0 - 2026-09-25
 
 ### Features

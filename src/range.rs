@@ -27,17 +27,6 @@ pub enum CoordField {
     EnemyY,
 }
 
-impl CoordField {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::YouX => "Your X",
-            Self::YouY => "Your Y",
-            Self::EnemyX => "Target X",
-            Self::EnemyY => "Target Y",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Fix {
     pub dx: f64,
@@ -66,6 +55,22 @@ pub fn wardogs_pair(text: &str) -> Option<(String, String)> {
         Some((x, y))
     } else {
         None
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ClipUpdate {
+    Own { x: String, y: String },
+    Target { x: String, y: String },
+}
+
+/// First Wardogs copy is your station. Later copies are the target until the board is cleared.
+pub fn update_from_clip(own_locked: bool, text: &str) -> Option<ClipUpdate> {
+    let (x, y) = wardogs_pair(text)?;
+    if own_locked {
+        Some(ClipUpdate::Target { x, y })
+    } else {
+        Some(ClipUpdate::Own { x, y })
     }
 }
 
@@ -294,6 +299,25 @@ mod tests {
         let mut y = "x3.00, y4.00".to_owned();
         absorb_wardogs(&mut x, &mut y);
         assert_eq!((x.as_str(), y.as_str()), ("3.00", "4.00"));
+    }
+
+    #[test]
+    fn first_copy_locks_own_and_later_copies_move_the_target() {
+        assert_eq!(
+            update_from_clip(false, "x10.00, y20.00"),
+            Some(ClipUpdate::Own {
+                x: "10.00".into(),
+                y: "20.00".into(),
+            })
+        );
+        assert_eq!(
+            update_from_clip(true, "x13.00, y24.00"),
+            Some(ClipUpdate::Target {
+                x: "13.00".into(),
+                y: "24.00".into(),
+            })
+        );
+        assert_eq!(update_from_clip(true, "hello"), None);
     }
 
     #[test]

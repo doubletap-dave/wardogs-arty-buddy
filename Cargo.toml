@@ -1,8 +1,9 @@
 [package]
 name = "wardogs-arty-buddy"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Map-coordinate range calculator. Pythagorean distance times 100, in meters."
 
 [dependencies]
+arboard = "3"
 eframe = "0.36.2"
