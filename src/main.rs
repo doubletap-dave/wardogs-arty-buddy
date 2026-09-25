@@ -8,8 +8,8 @@ use std::time::Duration;
 use eframe::egui;
 use egui::{
     Align, Align2, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Frame,
-    Layout, Margin, Rect, RichText, Sense, Stroke, StrokeKind, TextEdit, Vec2, ViewportCommand,
-    WindowLevel, pos2, vec2,
+    Layout, Margin, Rect, RichText, Sense, Stroke, StrokeKind, Vec2, ViewportCommand, pos2,
+    vec2,
 };
 
 use range::{BoardRead, ClipUpdate, absorb_wardogs, format_number, read_board, update_from_clip};
@@ -20,27 +20,28 @@ const WELL: Color32 = Color32::from_rgb(0x10, 0x14, 0x0B);
 const INK: Color32 = Color32::from_rgb(0xD8, 0xD0, 0xB8);
 const TAN: Color32 = Color32::from_rgb(0xC4, 0xB4, 0x8A);
 const AMBER: Color32 = Color32::from_rgb(0xE2, 0xA2, 0x2A);
-const BRICK: Color32 = Color32::from_rgb(0x8C, 0x3A, 0x2F);
 const OLIVE: Color32 = Color32::from_rgb(0x7D, 0x8A, 0x52);
 const LINE: Color32 = Color32::from_rgb(0x4E, 0x5A, 0x38);
-const DESK_SIZE: Vec2 = vec2(580.0, 372.0);
-const GAME_SIZE: Vec2 = vec2(400.0, 250.0);
+const TITLE: &str = concat!("Wardogs Arty Buddy ", env!("CARGO_PKG_VERSION"));
+const PAD: i8 = 10;
+const WINDOW_SIZE: Vec2 = vec2(400.0, 196.0);
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size(DESK_SIZE)
-            .with_min_inner_size(DESK_SIZE)
-            .with_max_inner_size(DESK_SIZE)
+            .with_inner_size(WINDOW_SIZE)
+            .with_min_inner_size(WINDOW_SIZE)
+            .with_max_inner_size(WINDOW_SIZE)
             .with_resizable(false)
             .with_maximize_button(false)
+            .with_always_on_top()
             .with_transparent(true)
-            .with_title("Wardogs Arty Buddy"),
+            .with_title(TITLE),
         ..Default::default()
     };
 
     eframe::run_native(
-        "Wardogs Arty Buddy",
+        TITLE,
         options,
         Box::new(|cc| Ok(Box::new(ArtyBuddy::new(cc)))),
     )
@@ -74,9 +75,7 @@ struct ArtyBuddy {
     you_y: String,
     enemy_x: String,
     enemy_y: String,
-    game_mode: bool,
     ink: Ink,
-    window_is_game: bool,
     locked_ppp: f32,
     own_locked: bool,
     last_clip: String,
@@ -93,9 +92,7 @@ impl ArtyBuddy {
             you_y: String::new(),
             enemy_x: String::new(),
             enemy_y: String::new(),
-            game_mode: false,
             ink: Ink::Green,
-            window_is_game: false,
             locked_ppp: 0.0,
             own_locked: false,
             last_clip: String::new(),
@@ -105,27 +102,15 @@ impl ArtyBuddy {
 
     fn sync_window(&mut self, ctx: &egui::Context) {
         let ppp = ctx.pixels_per_point();
-        let mode_changed = self.game_mode != self.window_is_game;
-        let scale_changed = (ppp - self.locked_ppp).abs() > 0.01;
-        if !mode_changed && !scale_changed {
+        if (ppp - self.locked_ppp).abs() <= 0.01 {
             return;
         }
-        if mode_changed {
-            let level = if self.game_mode {
-                WindowLevel::AlwaysOnTop
-            } else {
-                WindowLevel::Normal
-            };
-            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(level));
-        }
-        self.window_is_game = self.game_mode;
         self.locked_ppp = ppp;
-        let size = if self.game_mode { GAME_SIZE } else { DESK_SIZE };
         // Min and max are stored as physical pixels. Re-send them when the
         // monitor scale changes, or the old pixel size sticks on the new screen.
-        ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(size));
-        ctx.send_viewport_cmd(ViewportCommand::MaxInnerSize(size));
-        ctx.send_viewport_cmd(ViewportCommand::InnerSize(size));
+        ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(WINDOW_SIZE));
+        ctx.send_viewport_cmd(ViewportCommand::MaxInnerSize(WINDOW_SIZE));
+        ctx.send_viewport_cmd(ViewportCommand::InnerSize(WINDOW_SIZE));
     }
 
     fn watch_clipboard(&mut self) {
@@ -174,11 +159,7 @@ impl ArtyBuddy {
 
 impl eframe::App for ArtyBuddy {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        if self.game_mode {
-            Color32::TRANSPARENT.to_normalized_gamma_f32()
-        } else {
-            CANVAS.to_normalized_gamma_f32()
-        }
+        Color32::TRANSPARENT.to_normalized_gamma_f32()
     }
 
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -191,69 +172,25 @@ impl eframe::App for ArtyBuddy {
         absorb_wardogs(&mut self.you_x, &mut self.you_y);
         absorb_wardogs(&mut self.enemy_x, &mut self.enemy_y);
         let reading = read_board(&self.you_x, &self.you_y, &self.enemy_x, &self.enemy_y);
-        let plate = if self.game_mode {
-            Color32::from_rgba_unmultiplied(8, 12, 8, 176)
-        } else {
-            CANVAS
-        };
-        let margin = 10;
+        let plate = Color32::from_rgba_unmultiplied(8, 12, 8, 176);
         egui::CentralPanel::default()
-            .frame(Frame::new().fill(plate).inner_margin(Margin::same(margin)))
+            .frame(
+                Frame::new()
+                    .fill(plate)
+                    .inner_margin(Margin::same(PAD)),
+            )
             .show(ui, |ui| {
-                if self.game_mode {
-                    self.game_hud(ui, &reading);
-                } else {
-                    if header(ui) {
-                        self.game_mode = true;
-                    }
-                    ui.add_space(6.0);
-                    ui.columns(2, |cols| {
-                        station(
-                            cols,
-                            0,
-                            "OWN STATION",
-                            OLIVE,
-                            PANEL,
-                            LINE,
-                            &mut self.you_x,
-                            &mut self.you_y,
-                            !self.own_locked,
-                        );
-                        station(
-                            cols,
-                            1,
-                            "TARGET",
-                            BRICK,
-                            PANEL,
-                            LINE,
-                            &mut self.enemy_x,
-                            &mut self.enemy_y,
-                            true,
-                        );
-                    });
-                    ui.add_space(6.0);
-                    range_well(ui, &reading, None, false);
-                    ui.add_space(6.0);
-                    footer(ui, &reading, &mut || self.clear());
-                }
+                self.hud(ui, &reading);
             });
     }
 }
 
 impl ArtyBuddy {
-    fn game_hud(&mut self, ui: &mut egui::Ui, reading: &BoardRead) {
+    fn hud(&mut self, ui: &mut egui::Ui, reading: &BoardRead) {
         let ink = self.ink.color();
         ui.horizontal(|ui| {
             ink_squares(ui, &mut self.ink);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui
-                    .add(egui::Button::new(
-                        RichText::new("BACK").font(mono(12.0)).color(ink),
-                    ))
-                    .clicked()
-                {
-                    self.game_mode = false;
-                }
                 if ui
                     .add(egui::Button::new(
                         RichText::new("CLEAR").font(mono(12.0)).color(ink),
@@ -268,7 +205,7 @@ impl ArtyBuddy {
         readout(ui, "OWN", &self.you_x, &self.you_y, ink);
         readout(ui, "TGT", &self.enemy_x, &self.enemy_y, ink);
         ui.add_space(6.0);
-        range_well(ui, reading, Some(ink), true);
+        range_well(ui, reading, ink);
     }
 }
 
@@ -349,7 +286,7 @@ fn install_style(ctx: &egui::Context) {
 
         style.spacing.item_spacing = vec2(8.0, 4.0);
         style.spacing.button_padding = vec2(10.0, 4.0);
-        style.spacing.window_margin = Margin::same(8);
+        style.spacing.window_margin = Margin::same(PAD);
         style.text_styles.insert(
             egui::TextStyle::Heading,
             FontId::new(26.0, FontFamily::Name("stencil".into())),
@@ -379,33 +316,6 @@ fn stencil(size: f32) -> FontId {
 
 fn mono(size: f32) -> FontId {
     FontId::new(size, FontFamily::Monospace)
-}
-
-fn header(ui: &mut egui::Ui) -> bool {
-    let mut enter_game = false;
-    ui.horizontal(|ui| {
-        ui.label(RichText::new("WARDOGS").font(stencil(22.0)).color(TAN));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if ui
-                .add(egui::Button::new(
-                    RichText::new("GAME").font(mono(13.0)).color(TAN),
-                ))
-                .clicked()
-            {
-                enter_game = true;
-            }
-            ui.label(
-                RichText::new("FIRE DIRECTION")
-                    .font(mono(13.0))
-                    .color(OLIVE),
-            );
-        });
-    });
-    ui.label(RichText::new("ARTY BUDDY").font(stencil(14.0)).color(INK));
-    ui.add_space(4.0);
-    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 2.0), Sense::hover());
-    ui.painter().rect_filled(rect, CornerRadius::ZERO, AMBER);
-    enter_game
 }
 
 fn ink_squares(ui: &mut egui::Ui, ink: &mut Ink) {
@@ -445,80 +355,28 @@ fn readout(ui: &mut egui::Ui, label: &str, x: &str, y: &str, color: Color32) {
     });
 }
 
-fn station(
-    cols: &mut [egui::Ui],
-    index: usize,
-    title: &str,
-    accent: Color32,
-    plate: Color32,
-    stroke: Color32,
-    x: &mut String,
-    y: &mut String,
-    editable: bool,
-) {
-    let ui = &mut cols[index];
-    Frame::new()
-        .fill(plate)
-        .stroke(Stroke::new(1.0, stroke))
-        .inner_margin(Margin::same(8))
-        .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                let (mark, _) = ui.allocate_exact_size(vec2(4.0, 12.0), Sense::hover());
-                ui.painter().rect_filled(mark, CornerRadius::ZERO, accent);
-                ui.label(RichText::new(title).font(mono(12.0)).color(TAN));
-            });
-            ui.add_space(4.0);
-            coord_field(ui, "X", x, editable);
-            ui.add_space(4.0);
-            coord_field(ui, "Y", y, editable);
-        });
-}
-
-fn coord_field(ui: &mut egui::Ui, axis: &str, value: &mut String, editable: bool) {
-    ui.horizontal(|ui| {
-        ui.add_sized(
-            [16.0, 28.0],
-            egui::Label::new(RichText::new(axis).font(mono(16.0)).color(AMBER)),
-        );
-        ui.add(
-            TextEdit::singleline(value)
-                .font(mono(20.0))
-                .desired_width(ui.available_width())
-                .interactive(editable)
-                .margin(Margin::symmetric(8, 6)),
-        );
-    });
-}
-
-fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Option<Color32>, compact: bool) {
-    let height = if compact { 88.0 } else { 120.0 };
-    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
-    let accent = ink.unwrap_or(AMBER);
-    let line = ink.unwrap_or(LINE);
-    let caption_color = ink.unwrap_or(TAN);
-    let fault = match ink {
-        Some(color) if color.r() > 220 && color.g() < 90 => Color32::WHITE,
-        _ => BRICK,
-    };
-    let fill = if ink.is_some() {
-        Color32::from_rgba_unmultiplied(0, 0, 0, 150)
+fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Color32) {
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 88.0), Sense::hover());
+    let fault = if ink.r() > 220 && ink.g() < 90 {
+        Color32::WHITE
     } else {
-        WELL
+        Color32::from_rgb(0xFF, 0x5A, 0x4A)
     };
+    let fill = Color32::from_rgba_unmultiplied(0, 0, 0, 150);
     let painter = ui.painter();
     painter.rect_filled(rect, CornerRadius::ZERO, fill);
     painter.rect_stroke(
         rect,
         CornerRadius::ZERO,
-        Stroke::new(1.0, line),
+        Stroke::new(1.0, ink),
         StrokeKind::Inside,
     );
-    corner_ticks(painter, rect, accent);
+    corner_ticks(painter, rect, ink);
 
     let center = rect.center();
     let (label, color) = match reading {
-        BoardRead::Ready(fix) => (format!("{}m", format_number(fix.meters)), accent),
-        BoardRead::Need(_) => ("STANDBY".to_owned(), caption_color),
+        BoardRead::Ready(fix) => (format!("{}m", format_number(fix.meters)), ink),
+        BoardRead::Need(_) => ("STANDBY".to_owned(), ink),
         BoardRead::Fault(_) => ("FAULT".to_owned(), fault),
     };
     let digits = label.trim_end_matches('m');
@@ -535,16 +393,14 @@ fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Option<Color32>, comp
     } else {
         34.0
     };
-    if compact {
-        number_size *= 0.72;
-    }
+    number_size *= 0.72;
     let font = stencil(number_size);
     let text_width = painter
         .layout_no_wrap(label.clone(), font.clone(), color)
         .size()
         .x;
     let half = text_width * 0.5 + 14.0;
-    let hairline = Stroke::new(1.0, line);
+    let hairline = Stroke::new(1.0, ink);
     painter.line_segment(
         [
             pos2(rect.left() + 18.0, center.y),
@@ -577,46 +433,4 @@ fn corner_ticks(painter: &egui::Painter, rect: Rect, color: Color32) {
         painter.line_segment([origin, origin + vec2(arm * sx, 0.0)], stroke);
         painter.line_segment([origin, origin + vec2(0.0, arm * sy)], stroke);
     }
-}
-
-fn footer(ui: &mut egui::Ui, reading: &BoardRead, clear: &mut dyn FnMut()) {
-    ui.horizontal(|ui| {
-        match reading {
-            BoardRead::Ready(fix) => {
-                delta(ui, "ΔX", format_number(fix.dx));
-                delta(ui, "ΔY", format_number(fix.dy));
-                delta(ui, "GRID", format_number(fix.grid));
-            }
-            BoardRead::Need(_) => {
-                ui.label(
-                    RichText::new("100 × straight-line grid distance")
-                        .font(mono(13.0))
-                        .color(TAN),
-                );
-            }
-            BoardRead::Fault(_) => {
-                ui.label(
-                    RichText::new("Use a plain number, like 12 or -3.5")
-                        .font(mono(13.0))
-                        .color(BRICK),
-                );
-            }
-        }
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if ui
-                .add(egui::Button::new(
-                    RichText::new("CLEAR BOARD").font(mono(13.0)).color(TAN),
-                ))
-                .clicked()
-            {
-                clear();
-            }
-        });
-    });
-}
-
-fn delta(ui: &mut egui::Ui, label: &str, value: String) {
-    ui.label(RichText::new(label).font(mono(12.0)).color(OLIVE));
-    ui.label(RichText::new(value).font(mono(16.0)).color(INK));
-    ui.add_space(12.0);
 }

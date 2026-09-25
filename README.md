@@ -8,19 +8,19 @@ meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 
 ## How to use
 
-Open the app, then copy points out of Wardogs. The board is watching the clipboard.
+The app is one small window. It opens transparent and stays above other windows, so you can leave it over the game. The colored squares change the ink.
+
+It watches the clipboard.
 
 1. Right-click where you are and choose get coordinates.
 2. Press Ctrl+A so the whole coordinate line is selected, then Ctrl+C.
-3. The first copy fills **Own station**. That is your gun. It stays there.
+3. The first copy fills **OWN**. That is your gun. It stays there.
 4. Right-click the place you want to shoot, get coordinates, then Ctrl+A and Ctrl+C again.
-5. That copy fills **Target** only. The range updates, shown as `500m`.
-6. Keep copying new targets the same way. Own station does not move.
-7. Click **Clear board** when you want a new gun position. The next copy sets Own station again, and copies after that are targets.
+5. That copy fills **TGT** only. The range updates, shown as `500m`.
+6. Keep copying new targets the same way. **OWN** does not move.
+7. Click **CLEAR** when you want a new gun position. The next copy sets **OWN** again, and copies after that are targets.
 
 A copied point looks like `x12.34, y56.78`. After the board accepts it, the clipboard is cleared, so a missed copy does not apply the same point twice. Copy the next point with Ctrl+A, Ctrl+C.
-
-**GAME** shrinks the board, turns it transparent, and keeps it above other windows so it can sit over the game without covering the screen. The colored squares change the ink. **CLEAR** does the same thing as Clear board. **BACK** returns to the full window.
 
 From a source checkout:
 

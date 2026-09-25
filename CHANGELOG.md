@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-09-25
+
+### Features
+
+- The transparent overlay is the only window, and it stays above the game
+- Show the version in the window title
+
+### Fixes
+
+- Lengthen the window so the range box is fully visible
+
 ## 0.2.2 - 2026-09-25
 
 ### Fixes
