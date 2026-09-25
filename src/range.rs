@@ -53,6 +53,83 @@ pub enum BoardRead {
     Ready(Fix),
 }
 
+/// A Wardogs copy is `x12.34, y56.78`: one to three digits before the
+/// decimal, always two after. Returns the two numeric strings.
+pub fn wardogs_pair(text: &str) -> Option<(String, String)> {
+    let rest = strip_axis(text.trim(), 'x')?;
+    let (x, rest) = take_fixed(rest)?;
+    let rest = rest.trim_start();
+    let rest = rest.strip_prefix(',')?.trim_start();
+    let rest = strip_axis(rest, 'y')?;
+    let (y, rest) = take_fixed(rest)?;
+    if rest.trim().is_empty() {
+        Some((x, y))
+    } else {
+        None
+    }
+}
+
+/// `x12.34` or `y56.78` on its own.
+pub fn wardogs_single(text: &str, axis: char) -> Option<String> {
+    let rest = strip_axis(text.trim(), axis)?;
+    let (value, rest) = take_fixed(rest)?;
+    if rest.trim().is_empty() {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+/// If either box holds a full Wardogs copy, fill both. A lone `x` or `y`
+/// value is stripped down to its number.
+pub fn absorb_wardogs(x: &mut String, y: &mut String) {
+    if let Some((next_x, next_y)) = wardogs_pair(x).or_else(|| wardogs_pair(y)) {
+        *x = next_x;
+        *y = next_y;
+        return;
+    }
+    if let Some(next_x) = wardogs_single(x, 'x') {
+        *x = next_x;
+    }
+    if let Some(next_y) = wardogs_single(y, 'y') {
+        *y = next_y;
+    }
+}
+
+fn strip_axis(text: &str, axis: char) -> Option<&str> {
+    let mut chars = text.chars();
+    let first = chars.next()?;
+    if !first.eq_ignore_ascii_case(&axis) {
+        return None;
+    }
+    Some(chars.as_str().trim_start())
+}
+
+fn take_fixed(text: &str) -> Option<(String, &str)> {
+    let bytes = text.as_bytes();
+    let mut index = 0;
+    let mut digits = 0;
+    while index < bytes.len() && bytes[index].is_ascii_digit() {
+        digits += 1;
+        if digits > 3 {
+            return None;
+        }
+        index += 1;
+    }
+    if digits < 1 || index >= bytes.len() || bytes[index] != b'.' {
+        return None;
+    }
+    index += 1;
+    let frac = index;
+    while index < bytes.len() && bytes[index].is_ascii_digit() {
+        index += 1;
+    }
+    if index - frac != 2 {
+        return None;
+    }
+    Some((text[..index].to_owned(), &text[index..]))
+}
+
 pub fn read_board(you_x: &str, you_y: &str, enemy_x: &str, enemy_y: &str) -> BoardRead {
     let fields = [
         (CoordField::YouX, you_x),
@@ -169,6 +246,66 @@ mod tests {
                 close(fix.dx, 3.0);
                 close(fix.dy, 4.0);
             }
+            other => panic!("expected a fix, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn wardogs_copy_accepts_one_to_three_digits() {
+        assert_eq!(
+            wardogs_pair("x1.00, y2.50"),
+            Some(("1.00".into(), "2.50".into()))
+        );
+        assert_eq!(
+            wardogs_pair("x12.34, y5.00"),
+            Some(("12.34".into(), "5.00".into()))
+        );
+        assert_eq!(
+            wardogs_pair("X123.45, Y67.89"),
+            Some(("123.45".into(), "67.89".into()))
+        );
+        assert_eq!(
+            wardogs_pair("x12.34,y67.80"),
+            Some(("12.34".into(), "67.80".into()))
+        );
+    }
+
+    #[test]
+    fn wardogs_copy_rejects_the_wrong_shape() {
+        assert_eq!(wardogs_pair("x12.3, y1.00"), None);
+        assert_eq!(wardogs_pair("x1234.00, y1.00"), None);
+        assert_eq!(wardogs_pair("x1.00 y2.00"), None);
+        assert_eq!(wardogs_pair("12.00, 34.00"), None);
+    }
+
+    #[test]
+    fn absorb_splits_a_pasted_pair_and_keeps_plain_numbers() {
+        let mut x = "x0.00, y0.00".to_owned();
+        let mut y = String::new();
+        absorb_wardogs(&mut x, &mut y);
+        assert_eq!((x.as_str(), y.as_str()), ("0.00", "0.00"));
+
+        let mut x = "3".to_owned();
+        let mut y = "4".to_owned();
+        absorb_wardogs(&mut x, &mut y);
+        assert_eq!((x.as_str(), y.as_str()), ("3", "4"));
+
+        let mut x = String::new();
+        let mut y = "x3.00, y4.00".to_owned();
+        absorb_wardogs(&mut x, &mut y);
+        assert_eq!((x.as_str(), y.as_str()), ("3.00", "4.00"));
+    }
+
+    #[test]
+    fn pasted_wardogs_copies_solve_to_meters() {
+        let mut you_x = "x10.00, y20.00".to_owned();
+        let mut you_y = String::new();
+        let mut enemy_x = "x13.00, y24.00".to_owned();
+        let mut enemy_y = String::new();
+        absorb_wardogs(&mut you_x, &mut you_y);
+        absorb_wardogs(&mut enemy_x, &mut enemy_y);
+        match read_board(&you_x, &you_y, &enemy_x, &enemy_y) {
+            BoardRead::Ready(fix) => close(fix.meters, 500.0),
             other => panic!("expected a fix, got {other:?}"),
         }
     }
