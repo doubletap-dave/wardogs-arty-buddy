@@ -6,6 +6,8 @@ Range in meters between two map points.
 meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
 
+This is flat ground distance. A copied coordinate does not include elevation, and there is no easy way to read height in game unless you are in a helicopter. If you and the target are at different heights, the real shot is longer than the number on screen. If an easy way to get elevation shows up, the app will start using it.
+
 ## Download
 
 Current release: **[v0.3.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.3.0)**
