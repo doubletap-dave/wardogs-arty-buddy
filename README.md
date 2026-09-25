@@ -8,21 +8,11 @@ meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 
 ## Run
 
-Prompt for coordinates. A blank line on Your X quits.
-
 ```
 cargo run
 ```
 
-Or pass all four numbers:
-
-```
-cargo run -- 0 0 3 4
-```
-
-```
-Range: 500 m
-```
+A window opens. Enter your X and Y, then the target X and Y. The range updates as you type. Clear board wipes the four fields.
 
 ## Test
 

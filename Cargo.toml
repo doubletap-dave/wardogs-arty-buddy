@@ -5,3 +5,4 @@ edition = "2024"
 description = "Map-coordinate range calculator. Pythagorean distance times 100, in meters."
 
 [dependencies]
+eframe = "0.36.2"
