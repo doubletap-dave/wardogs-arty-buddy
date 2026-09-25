@@ -217,6 +217,7 @@ impl eframe::App for ArtyBuddy {
                             LINE,
                             &mut self.you_x,
                             &mut self.you_y,
+                            !self.own_locked,
                         );
                         station(
                             cols,
@@ -227,6 +228,7 @@ impl eframe::App for ArtyBuddy {
                             LINE,
                             &mut self.enemy_x,
                             &mut self.enemy_y,
+                            true,
                         );
                     });
                     ui.add_space(6.0);
@@ -452,6 +454,7 @@ fn station(
     stroke: Color32,
     x: &mut String,
     y: &mut String,
+    editable: bool,
 ) {
     let ui = &mut cols[index];
     Frame::new()
@@ -465,13 +468,13 @@ fn station(
                 ui.label(RichText::new(title).font(mono(12.0)).color(TAN));
             });
             ui.add_space(4.0);
-            coord_field(ui, "X", x);
+            coord_field(ui, "X", x, editable);
             ui.add_space(4.0);
-            coord_field(ui, "Y", y);
+            coord_field(ui, "Y", y, editable);
         });
 }
 
-fn coord_field(ui: &mut egui::Ui, axis: &str, value: &mut String) {
+fn coord_field(ui: &mut egui::Ui, axis: &str, value: &mut String, editable: bool) {
     ui.horizontal(|ui| {
         ui.add_sized(
             [16.0, 28.0],
@@ -481,6 +484,7 @@ fn coord_field(ui: &mut egui::Ui, axis: &str, value: &mut String) {
             TextEdit::singleline(value)
                 .font(mono(20.0))
                 .desired_width(ui.available_width())
+                .interactive(editable)
                 .margin(Margin::symmetric(8, 6)),
         );
     });
