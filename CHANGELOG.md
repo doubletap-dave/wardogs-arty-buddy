@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 - 2026-09-25
+
+### Fixes
+
+- Keep the window a fixed size when it moves between monitors with different display scales
+- Shrink the full board so it is more compact
+
 ## 0.2.1 - 2026-09-25
 
 ### Features

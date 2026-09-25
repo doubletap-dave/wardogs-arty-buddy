@@ -8,7 +8,7 @@ use std::time::Duration;
 use eframe::egui;
 use egui::{
     Align, Align2, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Frame,
-    Layout, Margin, Rect, RichText, Sense, Stroke, StrokeKind, TextEdit, ViewportCommand,
+    Layout, Margin, Rect, RichText, Sense, Stroke, StrokeKind, TextEdit, Vec2, ViewportCommand,
     WindowLevel, pos2, vec2,
 };
 
@@ -23,12 +23,17 @@ const AMBER: Color32 = Color32::from_rgb(0xE2, 0xA2, 0x2A);
 const BRICK: Color32 = Color32::from_rgb(0x8C, 0x3A, 0x2F);
 const OLIVE: Color32 = Color32::from_rgb(0x7D, 0x8A, 0x52);
 const LINE: Color32 = Color32::from_rgb(0x4E, 0x5A, 0x38);
+const DESK_SIZE: Vec2 = vec2(580.0, 372.0);
+const GAME_SIZE: Vec2 = vec2(400.0, 250.0);
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([760.0, 560.0])
-            .with_min_inner_size([640.0, 480.0])
+            .with_inner_size(DESK_SIZE)
+            .with_min_inner_size(DESK_SIZE)
+            .with_max_inner_size(DESK_SIZE)
+            .with_resizable(false)
+            .with_maximize_button(false)
             .with_transparent(true)
             .with_title("Wardogs Arty Buddy"),
         ..Default::default()
@@ -72,6 +77,7 @@ struct ArtyBuddy {
     game_mode: bool,
     ink: Ink,
     window_is_game: bool,
+    locked_ppp: f32,
     own_locked: bool,
     last_clip: String,
     clipboard: Option<arboard::Clipboard>,
@@ -81,6 +87,7 @@ impl ArtyBuddy {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         install_fonts(&cc.egui_ctx);
         install_style(&cc.egui_ctx);
+        cc.egui_ctx.set_zoom_factor(1.0);
         Self {
             you_x: String::new(),
             you_y: String::new(),
@@ -89,6 +96,7 @@ impl ArtyBuddy {
             game_mode: false,
             ink: Ink::Green,
             window_is_game: false,
+            locked_ppp: 0.0,
             own_locked: false,
             last_clip: String::new(),
             clipboard: arboard::Clipboard::new().ok(),
@@ -96,19 +104,28 @@ impl ArtyBuddy {
     }
 
     fn sync_window(&mut self, ctx: &egui::Context) {
-        if self.game_mode == self.window_is_game {
+        let ppp = ctx.pixels_per_point();
+        let mode_changed = self.game_mode != self.window_is_game;
+        let scale_changed = (ppp - self.locked_ppp).abs() > 0.01;
+        if !mode_changed && !scale_changed {
             return;
         }
-        self.window_is_game = self.game_mode;
-        if self.game_mode {
-            ctx.send_viewport_cmd(ViewportCommand::InnerSize(vec2(400.0, 250.0)));
-            ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(vec2(360.0, 220.0)));
-            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::AlwaysOnTop));
-        } else {
-            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::Normal));
-            ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(vec2(640.0, 480.0)));
-            ctx.send_viewport_cmd(ViewportCommand::InnerSize(vec2(760.0, 560.0)));
+        if mode_changed {
+            let level = if self.game_mode {
+                WindowLevel::AlwaysOnTop
+            } else {
+                WindowLevel::Normal
+            };
+            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(level));
         }
+        self.window_is_game = self.game_mode;
+        self.locked_ppp = ppp;
+        let size = if self.game_mode { GAME_SIZE } else { DESK_SIZE };
+        // Min and max are stored as physical pixels. Re-send them when the
+        // monitor scale changes, or the old pixel size sticks on the new screen.
+        ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(size));
+        ctx.send_viewport_cmd(ViewportCommand::MaxInnerSize(size));
+        ctx.send_viewport_cmd(ViewportCommand::InnerSize(size));
     }
 
     fn watch_clipboard(&mut self) {
@@ -179,7 +196,7 @@ impl eframe::App for ArtyBuddy {
         } else {
             CANVAS
         };
-        let margin = if self.game_mode { 10 } else { 16 };
+        let margin = 10;
         egui::CentralPanel::default()
             .frame(Frame::new().fill(plate).inner_margin(Margin::same(margin)))
             .show(ui, |ui| {
@@ -189,7 +206,7 @@ impl eframe::App for ArtyBuddy {
                     if header(ui) {
                         self.game_mode = true;
                     }
-                    ui.add_space(12.0);
+                    ui.add_space(6.0);
                     ui.columns(2, |cols| {
                         station(
                             cols,
@@ -212,9 +229,9 @@ impl eframe::App for ArtyBuddy {
                             &mut self.enemy_y,
                         );
                     });
-                    ui.add_space(12.0);
+                    ui.add_space(6.0);
                     range_well(ui, &reading, None, false);
-                    ui.add_space(10.0);
+                    ui.add_space(6.0);
                     footer(ui, &reading, &mut || self.clear());
                 }
             });
@@ -328,9 +345,9 @@ fn install_style(ctx: &egui::Context) {
             widget.corner_radius = CornerRadius::ZERO;
         }
 
-        style.spacing.item_spacing = vec2(12.0, 8.0);
-        style.spacing.button_padding = vec2(14.0, 8.0);
-        style.spacing.window_margin = Margin::same(16);
+        style.spacing.item_spacing = vec2(8.0, 4.0);
+        style.spacing.button_padding = vec2(10.0, 4.0);
+        style.spacing.window_margin = Margin::same(8);
         style.text_styles.insert(
             egui::TextStyle::Heading,
             FontId::new(26.0, FontFamily::Name("stencil".into())),
@@ -365,7 +382,7 @@ fn mono(size: f32) -> FontId {
 fn header(ui: &mut egui::Ui) -> bool {
     let mut enter_game = false;
     ui.horizontal(|ui| {
-        ui.label(RichText::new("WARDOGS").font(stencil(28.0)).color(TAN));
+        ui.label(RichText::new("WARDOGS").font(stencil(22.0)).color(TAN));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if ui
                 .add(egui::Button::new(
@@ -382,8 +399,8 @@ fn header(ui: &mut egui::Ui) -> bool {
             );
         });
     });
-    ui.label(RichText::new("ARTY BUDDY").font(stencil(18.0)).color(INK));
-    ui.add_space(6.0);
+    ui.label(RichText::new("ARTY BUDDY").font(stencil(14.0)).color(INK));
+    ui.add_space(4.0);
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 2.0), Sense::hover());
     ui.painter().rect_filled(rect, CornerRadius::ZERO, AMBER);
     enter_game
@@ -440,16 +457,16 @@ fn station(
     Frame::new()
         .fill(plate)
         .stroke(Stroke::new(1.0, stroke))
-        .inner_margin(Margin::same(14))
+        .inner_margin(Margin::same(8))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                let (mark, _) = ui.allocate_exact_size(vec2(4.0, 14.0), Sense::hover());
+                let (mark, _) = ui.allocate_exact_size(vec2(4.0, 12.0), Sense::hover());
                 ui.painter().rect_filled(mark, CornerRadius::ZERO, accent);
-                ui.label(RichText::new(title).font(mono(13.0)).color(TAN));
+                ui.label(RichText::new(title).font(mono(12.0)).color(TAN));
             });
-            ui.add_space(10.0);
+            ui.add_space(4.0);
             coord_field(ui, "X", x);
-            ui.add_space(8.0);
+            ui.add_space(4.0);
             coord_field(ui, "Y", y);
         });
 }
@@ -470,7 +487,7 @@ fn coord_field(ui: &mut egui::Ui, axis: &str, value: &mut String) {
 }
 
 fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Option<Color32>, compact: bool) {
-    let height = if compact { 88.0 } else { 188.0 };
+    let height = if compact { 88.0 } else { 120.0 };
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     let accent = ink.unwrap_or(AMBER);
     let line = ink.unwrap_or(LINE);
