@@ -1,7 +1,28 @@
 use eframe::egui;
-use egui::{Color32, Painter, Pos2, Rect, Stroke, pos2};
+use egui::{Color32, CornerRadius, Painter, Pos2, Rect, Stroke, pos2};
 
 use crate::ink::Palette;
+
+pub(crate) fn paint_chromatic_plate(painter: &Painter, rect: Rect, phase: f32, palette: Palette) {
+    let step = 10.0;
+    let mut y = rect.top();
+    while y < rect.bottom() - 0.5 {
+        let y1 = (y + step).min(rect.bottom());
+        let mut x = rect.left();
+        while x < rect.right() - 0.5 {
+            let x1 = (x + step).min(rect.right());
+            let cell = Rect::from_min_max(pos2(x, y), pos2(x1, y1));
+            let along = perimeter_along(rect, cell.center());
+            painter.rect_filled(
+                cell,
+                CornerRadius::ZERO,
+                plate_tint(border_wave(along, phase, palette)),
+            );
+            x = x1;
+        }
+        y = y1;
+    }
+}
 
 pub(crate) fn paint_wave(
     painter: &Painter,
@@ -48,6 +69,71 @@ pub(crate) fn paint_complement_line(
             Stroke::new(1.6, complement_color(palette, amount, alpha)),
         );
     }
+}
+
+fn plate_tint(chroma: Color32) -> Color32 {
+    let tint = 0.22;
+    Color32::from_rgba_unmultiplied(
+        (chroma.r() as f32 * tint).round() as u8,
+        (chroma.g() as f32 * tint).round() as u8,
+        (chroma.b() as f32 * tint).round() as u8,
+        160,
+    )
+}
+
+fn perimeter_along(rect: Rect, point: Pos2) -> f32 {
+    let center = rect.center();
+    let dx = point.x - center.x;
+    let dy = point.y - center.y;
+    if dx.abs() < 0.001 && dy.abs() < 0.001 {
+        return 0.0;
+    }
+    let half_w = rect.width() * 0.5;
+    let half_h = rect.height() * 0.5;
+    let scale_x = if dx.abs() < 0.001 {
+        f32::MAX
+    } else {
+        half_w / dx.abs()
+    };
+    let scale_y = if dy.abs() < 0.001 {
+        f32::MAX
+    } else {
+        half_h / dy.abs()
+    };
+    let scale = scale_x.min(scale_y);
+    along_of_edge(rect, pos2(center.x + dx * scale, center.y + dy * scale))
+}
+
+fn along_of_edge(rect: Rect, hit: Pos2) -> f32 {
+    let w = rect.width().max(1.0);
+    let h = rect.height().max(1.0);
+    let total = (w + h) * 2.0;
+    let from_left = (hit.x - rect.left()).clamp(0.0, w);
+    let from_top = (hit.y - rect.top()).clamp(0.0, h);
+    let on_vertical = (hit.x - rect.left())
+        .abs()
+        .min((hit.x - rect.right()).abs())
+        <= (hit.y - rect.top())
+            .abs()
+            .min((hit.y - rect.bottom()).abs());
+    let distance = if !on_vertical && hit.y <= center_y(rect) {
+        from_left
+    } else if on_vertical && hit.x >= center_x(rect) {
+        w + from_top
+    } else if !on_vertical {
+        w + h + (w - from_left)
+    } else {
+        w * 2.0 + h + (h - from_top)
+    };
+    distance / total
+}
+
+fn center_x(rect: Rect) -> f32 {
+    (rect.left() + rect.right()) * 0.5
+}
+
+fn center_y(rect: Rect) -> f32 {
+    (rect.top() + rect.bottom()) * 0.5
 }
 
 fn wave_amount(along: f32, phase: f32) -> f32 {
@@ -242,6 +328,15 @@ mod tests {
         let shifted = border_hue(rainbow, 0.25, 0.4);
         let still = border_hue(rainbow, 0.25, 0.0);
         assert!((shifted - still - 0.4).abs() < 0.01);
+    }
+
+    #[test]
+    fn plate_samples_the_edge_the_ray_hits() {
+        let rect = Rect::from_min_max(pos2(0.0, 0.0), pos2(40.0, 10.0));
+        let top = perimeter_along(rect, pos2(20.0, 2.0));
+        assert!((top - 0.20).abs() < 0.02, "{top}");
+        let right = perimeter_along(rect, pos2(30.0, 5.0));
+        assert!((right - 0.45).abs() < 0.02, "{right}");
     }
 
     #[test]

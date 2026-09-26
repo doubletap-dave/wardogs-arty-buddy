@@ -8,7 +8,7 @@ use crate::ink::{Ink, ink_squares};
 use crate::range::{ClipUpdate, absorb_wardogs, read_board, update_from_clip};
 use crate::theme::{self, GUTTER, PAD, WINDOW_SIZE, mono};
 use crate::transparency::hold_transparency;
-use crate::wave::paint_wave;
+use crate::wave::{paint_chromatic_plate, paint_wave};
 
 pub(crate) struct ArtyBuddy {
     you_x: String,
@@ -146,22 +146,30 @@ impl eframe::App for ArtyBuddy {
         absorb_wardogs(&mut self.you_x, &mut self.you_y);
         absorb_wardogs(&mut self.enemy_x, &mut self.enemy_y);
         let reading = read_board(&self.you_x, &self.you_y, &self.enemy_x, &self.enemy_y);
+        let palette = self.ink.palette();
+        let phase = (ui.input(|input| input.time) as f32 / 6.5).fract();
+        if let Some(palette) = palette {
+            paint_chromatic_plate(ui.painter(), ui.max_rect(), phase, palette);
+        }
         let plate = Color32::from_rgba_unmultiplied(8, 12, 8, 176);
         let panel = egui::CentralPanel::default()
             .frame(
                 Frame::new()
-                    .fill(plate)
+                    .fill(if palette.is_some() {
+                        Color32::TRANSPARENT
+                    } else {
+                        plate
+                    })
                     .inner_margin(Margin::same(PAD + GUTTER)),
             )
             .show(ui, |ui| {
                 self.hud(ui, &reading);
             });
-        if let Some(palette) = self.ink.palette() {
-            let t = ui.input(|input| input.time) as f32;
+        if let Some(palette) = palette {
             paint_wave(
                 ui.painter(),
                 panel.response.rect.shrink(9.0),
-                (t / 6.5).fract(),
+                phase,
                 palette,
                 2.2,
                 8.0,
