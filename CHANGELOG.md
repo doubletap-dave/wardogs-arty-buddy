@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-09-25
+
+### Fixes
+
+- Keep the plate transparent after a screenshot
+
 ## 0.4.0 - 2026-09-25
 
 ### Features
