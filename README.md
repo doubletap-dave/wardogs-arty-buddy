@@ -8,12 +8,14 @@ meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 
 This is flat ground distance. A copied coordinate does not include elevation, and there is no easy way to read height in game unless you are in a helicopter. If you and the target are at different heights, the real shot is longer than the number on screen. If an easy way to get elevation shows up, the app will start using it.
 
+Idea progenitor: KingPredict.
+
 ## Download
 
-Current release: **[v0.3.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.3.0)**
+Current release: **[v0.4.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.4.0)**
 
-- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.3.0/wardogs-arty-buddy-windows-x86_64.exe)
-- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.3.0/wardogs-arty-buddy-linux-x86_64)
+- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.4.0/wardogs-arty-buddy-windows-x86_64.exe)
+- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.4.0/wardogs-arty-buddy-linux-x86_64)
 
 Older builds are on the [releases page](https://github.com/doubletap-dave/wardogs-arty-buddy/releases).
 

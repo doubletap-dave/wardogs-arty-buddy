@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-09-25
+
+### Features
+
+- Wave colors for the window edge and the range box: full rainbow, blue, purple, and red
+- Side lines fade through the complementary colors of the selected wave
+- Credit KingPredict as the idea progenitor
+
 ## 0.3.0 - 2026-09-25
 
 ### Features
