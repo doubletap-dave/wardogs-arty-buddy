@@ -10,10 +10,10 @@ That number is flat ground distance. The row under the coordinates adds height f
 
 ## Download
 
-Current release: **[v0.5.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.5.0)**
+Current release: **[v0.6.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.6.0)**
 
-- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.5.0/wardogs-arty-buddy-windows-x86_64.exe)
-- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.5.0/wardogs-arty-buddy-linux-x86_64)
+- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.6.0/wardogs-arty-buddy-windows-x86_64.exe)
+- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.6.0/wardogs-arty-buddy-linux-x86_64)
 
 Older builds are on the [releases page](https://github.com/doubletap-dave/wardogs-arty-buddy/releases).
 

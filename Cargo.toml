@@ -1,6 +1,6 @@
 [package]
 name = "wardogs-arty-buddy"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 description = "Map-coordinate range calculator. Pythagorean distance times 100, in meters."
 license = "MIT"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 - 2026-09-26
+
+### Features
+
+- Compass bearing beside the range, clockwise from north, in the same degrees as the in-game strip
+- Gun height, target height, and the difference from the Bakurani, Ozeti, and Zestafona elevation grids
+
 ## 0.5.0 - 2026-09-25
 
 ### Features
