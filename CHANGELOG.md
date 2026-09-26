@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 - 2026-09-26
+
+### Features
+
+- Range and bearing sit together in the middle of the box, and a long range shrinks so it stays inside
+- Heights are meters above the lowest ground on the selected map
+- Release builds check GitHub and replace themselves with a newer build
+- The Windows executable lists Ghostweasel Labs as the company
+
 ## 0.6.0 - 2026-09-26
 
 ### Features
