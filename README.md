@@ -8,8 +8,6 @@ meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 
 This is flat ground distance. A copied coordinate does not include elevation, and there is no easy way to read height in game unless you are in a helicopter. If you and the target are at different heights, the real shot is longer than the number on screen. If an easy way to get elevation shows up, the app will start using it.
 
-Idea progenitor: KingPredict.
-
 ## Download
 
 Current release: **[v0.4.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.4.0)**
@@ -25,7 +23,7 @@ The Linux build is made on Ubuntu 22.04. It needs Vulkan plus the usual X11 or W
 
 ## How to use
 
-The app is one small window. It opens transparent and stays above other windows, so you can leave it over the game. The colored squares change the ink.
+The app is one small window. It opens transparent and stays above other windows, so you can leave it over the game. The colored squares change the ink. The solid squares are flat colors. The striped squares are RGB waves: a full rainbow, plus blue, purple, and red. RGB as a color scheme was KingPredict's idea.
 
 It watches the clipboard.
 
