@@ -6,6 +6,7 @@ use egui::{Align, Color32, Frame, Layout, Margin, RichText, ViewportCommand};
 use crate::hud::{range_well, readout};
 use crate::ink::{Ink, ink_squares};
 use crate::range::{ClipUpdate, absorb_wardogs, read_board, update_from_clip};
+use crate::terrain::Map;
 use crate::theme::{self, GUTTER, PAD, WINDOW_SIZE, mono};
 use crate::transparency::hold_transparency;
 use crate::wave::{paint_chromatic_plate, paint_wave};
@@ -16,6 +17,7 @@ pub(crate) struct ArtyBuddy {
     enemy_x: String,
     enemy_y: String,
     ink: Ink,
+    map: Map,
     locked_ppp: f32,
     own_locked: bool,
     last_clip: String,
@@ -34,6 +36,7 @@ impl ArtyBuddy {
             enemy_x: String::new(),
             enemy_y: String::new(),
             ink: Ink::Green,
+            map: Map::Bakurani,
             locked_ppp: 0.0,
             own_locked: false,
             last_clip: String::new(),
@@ -116,6 +119,16 @@ impl ArtyBuddy {
         ui.add_space(6.0);
         readout(ui, "OWN", &self.you_x, &self.you_y, ink);
         readout(ui, "TGT", &self.enemy_x, &self.enemy_y, ink);
+        ui.add_space(4.0);
+        crate::hud::elevation_row(
+            ui,
+            &mut self.map,
+            &self.you_x,
+            &self.you_y,
+            &self.enemy_x,
+            &self.enemy_y,
+            ink,
+        );
         ui.add_space(6.0);
         range_well(ui, reading, self.ink);
     }

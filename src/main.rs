@@ -4,6 +4,7 @@ mod app;
 mod hud;
 mod ink;
 mod range;
+mod terrain;
 mod theme;
 mod transparency;
 mod wave;

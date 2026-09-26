@@ -7,6 +7,16 @@ pub fn range_meters(you_x: f64, you_y: f64, enemy_x: f64, enemy_y: f64) -> f64 {
     dx.hypot(dy) * 100.0
 }
 
+/// Compass degrees, clockwise from north. +Y is north and +X is east.
+pub fn bearing_degrees(dx: f64, dy: f64) -> f64 {
+    dx.atan2(dy).to_degrees().rem_euclid(360.0)
+}
+
+pub fn format_bearing(degrees: f64) -> String {
+    let rounded = degrees.round() as i64;
+    format!("{:03}°", rounded.rem_euclid(360))
+}
+
 pub fn format_number(value: f64) -> String {
     let rounded = (value * 100.0).round() / 100.0;
     if (rounded - rounded.round()).abs() < 1e-9 {
@@ -33,6 +43,7 @@ pub struct Fix {
     pub dy: f64,
     pub grid: f64,
     pub meters: f64,
+    pub bearing: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -171,6 +182,7 @@ pub fn read_board(you_x: &str, you_y: &str, enemy_x: &str, enemy_y: &str) -> Boa
         dy,
         grid: dx.hypot(dy),
         meters: range_meters(parsed[0], parsed[1], parsed[2], parsed[3]),
+        bearing: bearing_degrees(dx, dy),
     })
 }
 
@@ -209,6 +221,19 @@ mod tests {
     #[test]
     fn one_grid_step_on_x_is_one_hundred_meters() {
         close(range_meters(0.0, 0.0, 1.0, 0.0), 100.0);
+    }
+
+    #[test]
+    fn bearing_matches_the_compass() {
+        close(bearing_degrees(0.0, 1.0), 0.0);
+        close(bearing_degrees(1.0, 0.0), 90.0);
+        close(bearing_degrees(0.0, -1.0), 180.0);
+        close(bearing_degrees(-1.0, 0.0), 270.0);
+        close(bearing_degrees(1.0, 1.0), 45.0);
+        close(bearing_degrees(-1.0, 1.0), 315.0);
+        assert_eq!(format_bearing(359.6), "000°");
+        assert_eq!(format_bearing(90.2), "090°");
+        assert_eq!(format_bearing(270.0), "270°");
     }
 
     #[test]

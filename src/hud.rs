@@ -2,7 +2,8 @@ use eframe::egui;
 use egui::{Align2, Color32, CornerRadius, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
 
 use crate::ink::{Ink, Palette};
-use crate::range::{BoardRead, format_number};
+use crate::range::{BoardRead, format_bearing, format_number};
+use crate::terrain::{self, Map};
 use crate::theme::{mono, stencil};
 use crate::wave::{border_wave, paint_complement_line, paint_wave};
 
@@ -17,6 +18,57 @@ pub(crate) fn readout(ui: &mut egui::Ui, label: &str, x: &str, y: &str, color: C
                 .color(color),
         );
     });
+}
+
+pub(crate) fn elevation_row(
+    ui: &mut egui::Ui,
+    map: &mut Map,
+    you_x: &str,
+    you_y: &str,
+    enemy_x: &str,
+    enemy_y: &str,
+    color: Color32,
+) {
+    ui.horizontal(|ui| {
+        for choice in Map::ALL {
+            let swatch = if *map == choice {
+                color
+            } else {
+                Color32::from_rgb(0x7D, 0x8A, 0x52)
+            };
+            let button =
+                egui::Button::new(RichText::new(choice.short()).font(mono(12.0)).color(swatch));
+            if ui.add(button).on_hover_text(choice.name()).clicked() {
+                *map = choice;
+            }
+        }
+        let gun = terrain::elevation_of(*map, you_x, you_y);
+        let target = terrain::elevation_of(*map, enemy_x, enemy_y);
+        let gun_text = gun.map_or("—".to_owned(), |meters| format!("{}m", format_number(meters)));
+        let target_text =
+            target.map_or("—".to_owned(), |meters| format!("{}m", format_number(meters)));
+        let delta_text = match (gun, target) {
+            (Some(gun), Some(target)) => format!("{}m", format_delta(target - gun)),
+            _ => "—".to_owned(),
+        };
+        height_pair(ui, "G", &gun_text, color);
+        height_pair(ui, "T", &target_text, color);
+        height_pair(ui, "DZ", &delta_text, color);
+    });
+}
+
+fn height_pair(ui: &mut egui::Ui, label: &str, value: &str, color: Color32) {
+    ui.label(RichText::new(label).font(mono(12.0)).color(color));
+    ui.label(RichText::new(value).font(mono(16.0)).color(color));
+}
+
+fn format_delta(meters: f64) -> String {
+    let text = format_number(meters.abs());
+    if meters >= 0.0 {
+        format!("+{text}")
+    } else {
+        format!("-{text}")
+    }
 }
 
 pub(crate) fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Ink) {
@@ -48,10 +100,14 @@ pub(crate) fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Ink) {
     }
 
     let center = rect.center();
-    let (label, color) = match reading {
-        BoardRead::Ready(fix) => (format!("{}m", format_number(fix.meters)), color),
-        BoardRead::Need(_) => ("STANDBY".to_owned(), color),
-        BoardRead::Fault(_) => ("FAULT".to_owned(), fault),
+    let (label, bearing, color) = match reading {
+        BoardRead::Ready(fix) => (
+            format!("{}m", format_number(fix.meters)),
+            Some(format_bearing(fix.bearing)),
+            color,
+        ),
+        BoardRead::Need(_) => ("STANDBY".to_owned(), None, color),
+        BoardRead::Fault(_) => ("FAULT".to_owned(), None, fault),
     };
     let digits = label.trim_end_matches('m');
     let mut number_size = if label.ends_with('m')
@@ -74,12 +130,20 @@ pub(crate) fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Ink) {
         .size()
         .x;
     let half = text_width * 0.5 + 14.0;
+    let bearing_font = stencil(number_size * 0.42);
+    let bearing_width = bearing.as_ref().map_or(0.0, |text| {
+        painter
+            .layout_no_wrap(text.clone(), bearing_font.clone(), color)
+            .size()
+            .x
+    });
+    let bearing_gap = if bearing.is_some() { 8.0 } else { 0.0 };
     let left = [
         pos2(rect.left() + 18.0, center.y),
         pos2(center.x - half, center.y),
     ];
     let right = [
-        pos2(center.x + half, center.y),
+        pos2(center.x + half + bearing_width + bearing_gap, center.y),
         pos2(rect.right() - 18.0, center.y),
     ];
     if let Some((phase, palette)) = wave {
@@ -91,6 +155,15 @@ pub(crate) fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Ink) {
         painter.line_segment(right, hairline);
     }
     painter.text(center, Align2::CENTER_CENTER, label, font, color);
+    if let Some(bearing) = bearing {
+        painter.text(
+            pos2(center.x + text_width * 0.5 + bearing_gap, center.y),
+            Align2::LEFT_CENTER,
+            bearing,
+            bearing_font,
+            color,
+        );
+    }
 }
 
 fn corner_ticks(painter: &egui::Painter, rect: Rect, color: Color32) {

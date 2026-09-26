@@ -17,7 +17,7 @@ pub(crate) const TITLE: &str = concat!("Wardogs Arty Buddy ", env!("CARGO_PKG_VE
 pub(crate) const PAD: i8 = 10;
 pub(crate) const GUTTER: i8 = 18;
 pub(crate) const WINDOW_SIZE: egui::Vec2 =
-    egui::vec2(400.0 + GUTTER as f32 * 2.0, 196.0 + GUTTER as f32 * 2.0);
+    egui::vec2(400.0 + GUTTER as f32 * 2.0, 220.0 + GUTTER as f32 * 2.0);
 
 pub(crate) fn install_fonts(ctx: &egui::Context) {
     let mut fonts = FontDefinitions::default();

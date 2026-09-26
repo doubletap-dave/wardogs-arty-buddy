@@ -1,0 +1,21 @@
+{
+  "format": "wardogs-terrain-lut-v1",
+  "mapId": "bakurani",
+  "source": "https://assets.wardogs-artillery.com/releases/assets-v1/data/terrain/bakurani/manifest.json",
+  "sourceFormat": "wardogs-landscape-collision-u16-v1",
+  "gameXMin": 0.0,
+  "gameYMin": 0.0,
+  "spacingMeters": 10.0,
+  "samplesX": 1633,
+  "samplesY": 1633,
+  "encoding": "little-endian int16 decimeters, row-major (y rows, x cols); -32768 = no data",
+  "quadMapping": {
+    "globalQuadOffsetX": 8160.0,
+    "globalQuadOffsetY": 14280.0,
+    "quadsPerGameUnitX": 50.0,
+    "quadsPerGameUnitY": -50.0
+  },
+  "datumNote": "Heights are on the source dataset's offset datum (~900 m off absolute). Only differences between samples are meaningful.",
+  "bytes": 5333378,
+  "missingSamples": 0
+}
