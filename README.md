@@ -6,6 +6,17 @@ Range in meters between two map points.
 meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
 
+The bearing under that number is the compass azimuth. **+Y is north, +X is east**, and degrees run clockwise from north, the same as the strip in game: 0° north, 90° east, 180° south, 270° west.
+
+```
+dx = enemy X − your X
+dy = enemy Y − your Y
+degrees = atan2(dx, dy) × 180 / π
+azimuth = degrees wrapped into 0–360
+```
+
+`atan2` is called with `dx` first so 0° points north and the angle increases clockwise. The app rounds that to the nearest degree and prints three digits, so east is `090°`.
+
 That number is flat ground distance. The row under the coordinates adds height from a 10 m elevation grid: gun, target, and DZ (target minus gun). Pick the map first (BAK, OZE, ZES). Heights are meters above the lowest ground on that map, not sea level. A point past the surveyed edge, mostly a thin strip on Ozeti, shows a dash. The grids come from community terrain data published by [wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator).
 
 ## Download
