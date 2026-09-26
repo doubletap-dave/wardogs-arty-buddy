@@ -8,3 +8,4 @@ license = "MIT"
 [dependencies]
 arboard = "3"
 eframe = "0.36.2"
+raw-window-handle = "0.6"
