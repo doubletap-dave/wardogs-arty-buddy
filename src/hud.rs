@@ -20,16 +20,12 @@ pub(crate) fn readout(ui: &mut egui::Ui, label: &str, x: &str, y: &str, color: C
     });
 }
 
-pub(crate) fn elevation_row(
-    ui: &mut egui::Ui,
-    map: &mut Map,
-    you_x: &str,
-    you_y: &str,
-    enemy_x: &str,
-    enemy_y: &str,
-    color: Color32,
-) {
+pub(crate) fn map_row(ui: &mut egui::Ui, map: &mut Map, color: Color32) {
     ui.horizontal(|ui| {
+        let button_width = 52.0;
+        let gaps = ui.spacing().item_spacing.x * 2.0;
+        let spare = (ui.available_width() - button_width * 3.0 - gaps).max(0.0);
+        ui.add_space(spare * 0.5);
         for choice in Map::ALL {
             let swatch = if *map == choice {
                 color
@@ -38,12 +34,29 @@ pub(crate) fn elevation_row(
             };
             let button =
                 egui::Button::new(RichText::new(choice.short()).font(mono(12.0)).color(swatch));
-            if ui.add(button).on_hover_text(choice.name()).clicked() {
+            if ui
+                .add_sized(vec2(button_width, 22.0), button)
+                .on_hover_text(choice.name())
+                .clicked()
+            {
                 *map = choice;
             }
         }
-        let gun = terrain::elevation_of(*map, you_x, you_y);
-        let target = terrain::elevation_of(*map, enemy_x, enemy_y);
+    });
+}
+
+pub(crate) fn elevation_row(
+    ui: &mut egui::Ui,
+    map: Map,
+    you_x: &str,
+    you_y: &str,
+    enemy_x: &str,
+    enemy_y: &str,
+    color: Color32,
+) {
+    ui.horizontal(|ui| {
+        let gun = terrain::elevation_of(map, you_x, you_y);
+        let target = terrain::elevation_of(map, enemy_x, enemy_y);
         let gun_text = gun.map_or("—".to_owned(), |meters| {
             format!("{}m", format_number(meters))
         });

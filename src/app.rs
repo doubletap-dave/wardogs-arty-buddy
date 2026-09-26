@@ -125,7 +125,7 @@ impl ArtyBuddy {
         ui.add_space(4.0);
         crate::hud::elevation_row(
             ui,
-            &mut self.map,
+            self.map,
             &self.you_x,
             &self.you_y,
             &self.enemy_x,
@@ -134,6 +134,8 @@ impl ArtyBuddy {
         );
         ui.add_space(6.0);
         range_well(ui, reading, self.ink);
+        ui.add_space(6.0);
+        crate::hud::map_row(ui, &mut self.map, ink);
     }
 }
 
