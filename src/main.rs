@@ -7,6 +7,7 @@ mod range;
 mod terrain;
 mod theme;
 mod transparency;
+mod update;
 mod wave;
 
 use eframe::egui;

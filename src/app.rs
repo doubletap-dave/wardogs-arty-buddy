@@ -9,6 +9,7 @@ use crate::range::{ClipUpdate, absorb_wardogs, read_board, update_from_clip};
 use crate::terrain::Map;
 use crate::theme::{self, GUTTER, PAD, WINDOW_SIZE, mono};
 use crate::transparency::hold_transparency;
+use crate::update::UpdateCheck;
 use crate::wave::{paint_chromatic_plate, paint_wave};
 
 pub(crate) struct ArtyBuddy {
@@ -23,6 +24,7 @@ pub(crate) struct ArtyBuddy {
     last_clip: String,
     last_clip_poll: f64,
     clipboard: Option<arboard::Clipboard>,
+    update_check: UpdateCheck,
 }
 
 impl ArtyBuddy {
@@ -42,6 +44,7 @@ impl ArtyBuddy {
             last_clip: String::new(),
             last_clip_poll: 0.0,
             clipboard: arboard::Clipboard::new().ok(),
+            update_check: UpdateCheck::new(),
         }
     }
 
@@ -150,6 +153,9 @@ impl eframe::App for ArtyBuddy {
         if now - self.last_clip_poll >= 0.2 {
             self.last_clip_poll = now;
             self.watch_clipboard();
+        }
+        if self.update_check.poll(now) {
+            std::process::exit(0);
         }
     }
 

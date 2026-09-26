@@ -44,9 +44,12 @@ pub(crate) fn elevation_row(
         }
         let gun = terrain::elevation_of(*map, you_x, you_y);
         let target = terrain::elevation_of(*map, enemy_x, enemy_y);
-        let gun_text = gun.map_or("—".to_owned(), |meters| format!("{}m", format_number(meters)));
-        let target_text =
-            target.map_or("—".to_owned(), |meters| format!("{}m", format_number(meters)));
+        let gun_text = gun.map_or("—".to_owned(), |meters| {
+            format!("{}m", format_number(meters))
+        });
+        let target_text = target.map_or("—".to_owned(), |meters| {
+            format!("{}m", format_number(meters))
+        });
         let delta_text = match (gun, target) {
             (Some(gun), Some(target)) => format!("{}m", format_delta(target - gun)),
             _ => "—".to_owned(),
@@ -124,46 +127,99 @@ pub(crate) fn range_well(ui: &mut egui::Ui, reading: &BoardRead, ink: Ink) {
         34.0
     };
     number_size *= 0.72;
-    let font = stencil(number_size);
-    let text_width = painter
-        .layout_no_wrap(label.clone(), font.clone(), color)
-        .size()
-        .x;
-    let half = text_width * 0.5 + 14.0;
-    let bearing_font = stencil(number_size * 0.42);
-    let bearing_width = bearing.as_ref().map_or(0.0, |text| {
-        painter
-            .layout_no_wrap(text.clone(), bearing_font.clone(), color)
-            .size()
-            .x
+    let max_width = (rect.width() - 36.0).max(24.0);
+    let (font, text_width, text_height, range_ink) =
+        fit_line(painter, &label, number_size, max_width, color);
+    let bearing_line = bearing.map(|text| {
+        let size = (number_size * 0.5).clamp(14.0, 22.0);
+        let (bearing_font, bearing_width, bearing_height, bearing_ink) =
+            fit_line(painter, &text, size, max_width, color);
+        (
+            text,
+            bearing_font,
+            bearing_width,
+            bearing_height,
+            bearing_ink,
+        )
     });
-    let bearing_gap = if bearing.is_some() { 8.0 } else { 0.0 };
+    let bar_y = center.y;
+    let bearing_height = bearing_line
+        .as_ref()
+        .map_or(0.0, |(_, _, _, height, _)| *height);
+    let separation = if bearing_line.is_some() {
+        text_height * 0.44 + bearing_height * 0.12
+    } else {
+        0.0
+    };
+    let ink_shift = bearing_line
+        .as_ref()
+        .map_or(range_ink, |(_, _, _, _, bearing_ink)| {
+            (range_ink + bearing_ink) * 0.5
+        });
+    let range_y = center.y - separation * 0.5 - ink_shift;
+    let half = text_width * 0.5 + 14.0;
     let left = [
-        pos2(rect.left() + 18.0, center.y),
-        pos2(center.x - half, center.y),
+        pos2(rect.left() + 18.0, bar_y),
+        pos2(center.x - half, bar_y),
     ];
     let right = [
-        pos2(center.x + half + bearing_width + bearing_gap, center.y),
-        pos2(rect.right() - 18.0, center.y),
+        pos2(center.x + half, bar_y),
+        pos2(rect.right() - 18.0, bar_y),
     ];
     if let Some((phase, palette)) = wave {
-        paint_complement_line(painter, left[0], left[1], phase, palette);
-        paint_complement_line(painter, right[1], right[0], phase, palette);
+        if left[0].x < left[1].x {
+            paint_complement_line(painter, left[0], left[1], phase, palette);
+        }
+        if right[0].x < right[1].x {
+            paint_complement_line(painter, right[1], right[0], phase, palette);
+        }
     } else {
         let hairline = Stroke::new(1.0, color);
-        painter.line_segment(left, hairline);
-        painter.line_segment(right, hairline);
+        if left[0].x < left[1].x {
+            painter.line_segment(left, hairline);
+        }
+        if right[0].x < right[1].x {
+            painter.line_segment(right, hairline);
+        }
     }
-    painter.text(center, Align2::CENTER_CENTER, label, font, color);
-    if let Some(bearing) = bearing {
+    painter.text(
+        pos2(center.x, range_y),
+        Align2::CENTER_CENTER,
+        label,
+        font,
+        color,
+    );
+    if let Some((bearing, bearing_font, _, _, _)) = bearing_line {
         painter.text(
-            pos2(center.x + text_width * 0.5 + bearing_gap, center.y),
-            Align2::LEFT_CENTER,
+            pos2(center.x, center.y + separation * 0.5 - ink_shift),
+            Align2::CENTER_CENTER,
             bearing,
             bearing_font,
             color,
         );
     }
+}
+
+fn fit_line(
+    painter: &egui::Painter,
+    text: &str,
+    mut size: f32,
+    max_width: f32,
+    color: Color32,
+) -> (egui::FontId, f32, f32, f32) {
+    let mut font = stencil(size);
+    let mut galley = painter.layout_no_wrap(text.to_owned(), font.clone(), color);
+    for _ in 0..2 {
+        let width = galley.size().x;
+        if width <= max_width || width <= 1.0 {
+            break;
+        }
+        size = (size * max_width / width).max(10.0);
+        font = stencil(size);
+        galley = painter.layout_no_wrap(text.to_owned(), font.clone(), color);
+    }
+    let ink_below_center = galley.mesh_bounds.center().y - galley.rect.center().y;
+    (font, galley.size().x, galley.size().y, ink_below_center)
 }
 
 fn corner_ticks(painter: &egui::Painter, rect: Rect, color: Color32) {

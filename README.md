@@ -6,7 +6,7 @@ Range in meters between two map points.
 meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
 
-That number is flat ground distance. The row under the coordinates adds height from a 10 m elevation grid: gun, target, and DZ (target minus gun). Pick the map first (BAK, OZE, ZES). Those heights sit on each map's own datum, hundreds of meters off true altitude, so use the difference. A point past the surveyed edge, mostly a thin strip on Ozeti, shows a dash. The grids come from community terrain data published by [wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator).
+That number is flat ground distance. The row under the coordinates adds height from a 10 m elevation grid: gun, target, and DZ (target minus gun). Pick the map first (BAK, OZE, ZES). Heights are meters above the lowest ground on that map, not sea level. A point past the surveyed edge, mostly a thin strip on Ozeti, shows a dash. The grids come from community terrain data published by [wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator).
 
 ## Download
 
@@ -31,7 +31,7 @@ It watches the clipboard.
 2. Press Ctrl+A so the whole coordinate line is selected, then Ctrl+C.
 3. The first copy fills **OWN**. That is your gun. It stays there.
 4. Right-click the place you want to shoot, get coordinates, then Ctrl+A and Ctrl+C again.
-5. That copy fills **TGT** only. The range updates, shown as `500m`, with the compass bearing beside it (`090°` is east). The height row shows gun, target, and DZ.
+5. That copy fills **TGT** only. The range updates, shown as `500m`, with the compass bearing centered under it (`090°` is east). The height row shows gun, target, and DZ.
 6. Keep copying new targets the same way. **OWN** does not move.
 7. Click **CLEAR** when you want a new gun position. The next copy sets **OWN** again, and copies after that are targets.
 
@@ -44,6 +44,8 @@ cargo run
 ```
 
 Release builds run only when a `v*` tag is pushed. Every push to `main` still runs the tests.
+
+A release build checks GitHub a few seconds after it opens, then about every six hours. If a newer tag is up, it downloads that build, replaces itself, and starts again. A `cargo run` debug build does not do this.
 
 ## Test
 

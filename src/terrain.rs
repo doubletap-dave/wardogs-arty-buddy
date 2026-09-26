@@ -61,9 +61,22 @@ impl Map {
         }
     }
 
-    /// Meters on this map's own datum, or nothing if the point is off the grid.
+    /// Meters above the lowest ground on this map, or nothing if the point is off the grid.
     pub(crate) fn elevation(self, x: f64, y: f64) -> Option<f64> {
-        self.grid().elevation(x, y)
+        let grid = self.grid();
+        Some(grid.elevation(x, y)? - self.baseline())
+    }
+
+    fn baseline(self) -> f64 {
+        static BAKURANI: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+        static OZETI: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+        static ZESTAFONA: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+        let slot = match self {
+            Self::Bakurani => &BAKURANI,
+            Self::Ozeti => &OZETI,
+            Self::Zestafona => &ZESTAFONA,
+        };
+        *slot.get_or_init(|| self.grid().lowest())
     }
 }
 
@@ -87,6 +100,21 @@ impl Grid {
         let top = z00 + (z10 - z00) * tx;
         let bot = z01 + (z11 - z01) * tx;
         Some(top + (bot - top) * ty)
+    }
+
+    fn lowest(&self) -> f64 {
+        let mut lowest = i16::MAX;
+        for chunk in self.samples.chunks_exact(2) {
+            let sample = i16::from_le_bytes([chunk[0], chunk[1]]);
+            if sample != NO_DATA {
+                lowest = lowest.min(sample);
+            }
+        }
+        if lowest == i16::MAX {
+            0.0
+        } else {
+            lowest as f64 / 10.0
+        }
     }
 
     fn meters_at(&self, x: usize, y: usize) -> Option<f64> {
@@ -144,5 +172,19 @@ mod tests {
     fn bakurani_center_has_a_height() {
         let height = Map::Bakurani.elevation(80.0, 80.0).unwrap();
         assert!(height.is_finite());
+        assert!(height >= 0.0, "{height}");
+    }
+
+    #[test]
+    fn shown_height_is_above_the_lowest_sample() {
+        // -1000 dm and -900 dm. The low corner should read 0 m, ten meters below the other.
+        let raw: &'static [u8] = &[24, 252, 124, 252, 24, 252, 24, 252];
+        let grid = grid(raw, 2, 2);
+        let low = grid.lowest();
+        assert!((low - (-100.0)).abs() < 1e-9, "{low}");
+        let shown = grid.elevation(0.0, 0.0).unwrap() - low;
+        assert!(shown.abs() < 1e-9, "{shown}");
+        let high = grid.elevation(0.1, 0.0).unwrap() - low;
+        assert!((high - 10.0).abs() < 1e-6, "{high}");
     }
 }
