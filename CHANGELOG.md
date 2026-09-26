@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 - 2026-09-26
+
+### Changes
+
+- BAK, OZE, and ZES sit under the range box
+
 ## 0.7.0 - 2026-09-26
 
 ### Features
