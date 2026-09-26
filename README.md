@@ -10,10 +10,10 @@ This is flat ground distance. A copied coordinate does not include elevation, an
 
 ## Download
 
-Current release: **[v0.4.1](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.4.1)**
+Current release: **[v0.5.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.5.0)**
 
-- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.4.1/wardogs-arty-buddy-windows-x86_64.exe)
-- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.4.1/wardogs-arty-buddy-linux-x86_64)
+- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.5.0/wardogs-arty-buddy-windows-x86_64.exe)
+- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.5.0/wardogs-arty-buddy-linux-x86_64)
 
 Older builds are on the [releases page](https://github.com/doubletap-dave/wardogs-arty-buddy/releases).
 

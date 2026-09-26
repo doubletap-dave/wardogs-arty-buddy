@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - 2026-09-25
+
+### Features
+
+- On a wave color, the plate follows the same scroll as the border, kept dark so the readouts stay readable
+
 ## 0.4.1 - 2026-09-25
 
 ### Fixes
