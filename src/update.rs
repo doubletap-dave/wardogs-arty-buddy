@@ -56,7 +56,7 @@ impl UpdateCheck {
 
 fn asset_name() -> &'static str {
     if cfg!(windows) {
-        "wardogs-arty-buddy-windows-x86_64.exe"
+        "WardogsArtyBuddy-Setup.exe"
     } else {
         "wardogs-arty-buddy-linux-x86_64"
     }
@@ -75,6 +75,7 @@ fn fetch_update() -> Option<PathBuf> {
         .into_string()
         .ok()?;
     let json: serde_json::Value = serde_json::from_str(&body).ok()?;
+    ensure_maps(&agent, &json);
     let tag = json.get("tag_name")?.as_str()?;
     if !is_newer(tag, env!("CARGO_PKG_VERSION")) {
         return None;
@@ -92,7 +93,11 @@ fn fetch_update() -> Option<PathBuf> {
         }
     })?;
     let current = std::env::current_exe().ok()?;
-    let dest = current.with_extension("update");
+    let dest = if cfg!(windows) {
+        current.with_file_name("WardogsArtyBuddy-Setup.update.exe")
+    } else {
+        current.with_extension("update")
+    };
     let mut reader = agent
         .get(&url)
         .set("User-Agent", "wardogs-arty-buddy")
@@ -104,11 +109,54 @@ fn fetch_update() -> Option<PathBuf> {
     file.flush().ok()?;
     drop(file);
     let len = std::fs::metadata(&dest).ok()?.len();
-    if len < 1_000_000 {
+    if len < 200_000 {
         let _ = std::fs::remove_file(&dest);
         return None;
     }
     Some(dest)
+}
+
+fn ensure_maps(agent: &ureq::Agent, json: &serde_json::Value) {
+    let Some(assets) = json.get("assets").and_then(|assets| assets.as_array()) else {
+        return;
+    };
+    let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("lut")))
+    else {
+        return;
+    };
+    let _ = std::fs::create_dir_all(&dir);
+    for file in ["bakurani.bin", "ozeti.bin", "zestafona.bin"] {
+        let dest = dir.join(file);
+        if dest.is_file() {
+            continue;
+        }
+        let Some(url) = assets.iter().find_map(|asset| {
+            let name = asset.get("name")?.as_str()?;
+            if name == file {
+                asset.get("browser_download_url")?.as_str()
+            } else {
+                None
+            }
+        }) else {
+            continue;
+        };
+        let Ok(response) = agent
+            .get(url)
+            .set("User-Agent", "wardogs-arty-buddy")
+            .call()
+        else {
+            continue;
+        };
+        let Ok(mut file) = File::create(&dest) else {
+            continue;
+        };
+        let mut reader = response.into_reader();
+        if std::io::copy(&mut reader, &mut file).is_err() {
+            let _ = std::fs::remove_file(&dest);
+        }
+    }
 }
 
 fn is_newer(latest: &str, current: &str) -> bool {
@@ -141,14 +189,14 @@ fn relaunch(downloaded: &Path) -> bool {
     spawned.is_ok()
 }
 
-fn spawn_windows_swap(pid: u32, downloaded: &Path, current: &Path) -> std::io::Result<()> {
-    let new_path = ps_quote(downloaded);
-    let exe_path = ps_quote(current);
+fn spawn_windows_swap(pid: u32, downloaded: &Path, _current: &Path) -> std::io::Result<()> {
+    let setup = ps_quote(downloaded);
     let script = format!(
         "$deadline = (Get-Date).AddSeconds(30); \
          while ((Get-Process -Id {pid} -ErrorAction SilentlyContinue) -and ((Get-Date) -lt $deadline)) {{ Start-Sleep -Milliseconds 200 }}; \
-         Move-Item -LiteralPath {new_path} -Destination {exe_path} -Force; \
-         Start-Process -FilePath {exe_path}"
+         Start-Process -FilePath {setup} -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait; \
+         $installed = Join-Path $env:LOCALAPPDATA 'Ghostweasel Labs\\Wardogs Arty Buddy\\wardogs-arty-buddy.exe'; \
+         if (Test-Path -LiteralPath $installed) {{ Start-Process -FilePath $installed }}"
     );
     Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])

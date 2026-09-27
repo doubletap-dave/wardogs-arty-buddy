@@ -96,11 +96,8 @@ impl ArtyBuddy {
     }
 
     fn clear(&mut self) {
-        self.you_x.clear();
-        self.you_y.clear();
         self.enemy_x.clear();
         self.enemy_y.clear();
-        self.own_locked = false;
         self.last_clip.clear();
     }
 

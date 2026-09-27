@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+use std::sync::OnceLock;
+
 const SPACING: f64 = 0.1;
 const NO_DATA: i16 = i16::MIN;
 
@@ -42,21 +45,21 @@ impl Map {
                 y_min: 0.0,
                 nx: 1633,
                 ny: 1633,
-                samples: include_bytes!("lut/bakurani.bin"),
+                samples: lut_bytes("bakurani.bin"),
             },
             Self::Ozeti => Grid {
                 x_min: 0.0,
                 y_min: 1.62,
                 nx: 1617,
                 ny: 1617,
-                samples: include_bytes!("lut/ozeti.bin"),
+                samples: lut_bytes("ozeti.bin"),
             },
             Self::Zestafona => Grid {
                 x_min: 0.0,
                 y_min: 0.0,
                 nx: 1633,
                 ny: 1633,
-                samples: include_bytes!("lut/zestafona.bin"),
+                samples: lut_bytes("zestafona.bin"),
             },
         }
     }
@@ -123,6 +126,45 @@ impl Grid {
         let sample = i16::from_le_bytes([bytes[0], bytes[1]]);
         (sample != NO_DATA).then_some(sample as f64 / 10.0)
     }
+}
+
+fn lut_bytes(file: &str) -> &'static [u8] {
+    static BAKURANI: OnceLock<Vec<u8>> = OnceLock::new();
+    static OZETI: OnceLock<Vec<u8>> = OnceLock::new();
+    static ZESTAFONA: OnceLock<Vec<u8>> = OnceLock::new();
+    let slot = match file {
+        "bakurani.bin" => &BAKURANI,
+        "ozeti.bin" => &OZETI,
+        _ => &ZESTAFONA,
+    };
+    slot.get_or_init(|| read_lut(file)).as_slice()
+}
+
+fn read_lut(file: &str) -> Vec<u8> {
+    for path in lut_candidates(file) {
+        if let Ok(bytes) = std::fs::read(&path) {
+            if bytes.len() >= 2 {
+                return bytes;
+            }
+        }
+    }
+    Vec::new()
+}
+
+pub(crate) fn lut_candidates(file: &str) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            paths.push(dir.join("lut").join(file));
+        }
+    }
+    paths.push(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("lut")
+            .join(file),
+    );
+    paths
 }
 
 pub(crate) fn elevation_of(map: Map, x: &str, y: &str) -> Option<f64> {

@@ -23,8 +23,10 @@ That number is flat ground distance. The row under the coordinates adds height f
 
 Current release: **[v0.7.1](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.7.1)**
 
-- [Windows](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.7.1/wardogs-arty-buddy-windows-x86_64.exe)
+- [Windows installer](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.7.1/WardogsArtyBuddy-Setup.exe). This is the Windows download. It puts the program and the map files in `%LOCALAPPDATA%\Ghostweasel Labs\Wardogs Arty Buddy` and adds a Start menu shortcut.
 - [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.7.1/wardogs-arty-buddy-linux-x86_64)
+
+The height grids are not inside the executable. The installer places `lut/bakurani.bin`, `lut/ozeti.bin`, and `lut/zestafona.bin` beside it. A newer Windows release downloads that installer and runs it.
 
 Older builds are on the [releases page](https://github.com/doubletap-dave/wardogs-arty-buddy/releases).
 
@@ -44,7 +46,7 @@ It watches the clipboard.
 4. Right-click the place you want to shoot, get coordinates, then Ctrl+A and Ctrl+C again.
 5. That copy fills **TGT** only. The range updates, shown as `500m`, with the compass bearing centered under it (`090°` is east). The height row shows gun, target, and DZ.
 6. Keep copying new targets the same way. **OWN** does not move.
-7. Click **CLEAR** when you want a new gun position. The next copy sets **OWN** again, and copies after that are targets.
+7. Click **CLEAR** to drop the target. The gun and the selected map stay put.
 
 A copied point looks like `x12.34, y56.78`. After the board accepts it, the clipboard is cleared, so a missed copy does not apply the same point twice. Copy the next point with Ctrl+A, Ctrl+C.
 
@@ -56,7 +58,7 @@ cargo run
 
 Release builds run only when a `v*` tag is pushed. Every push to `main` still runs the tests.
 
-A release build checks GitHub a few seconds after it opens, then about every six hours. If a newer tag is up, it downloads that build, replaces itself, and starts again. A `cargo run` debug build does not do this.
+A release build checks GitHub a few seconds after it opens, then about every six hours. On Windows, a newer tag downloads the installer and runs it. On Linux, it replaces the binary. A `cargo run` debug build does not do this.
 
 ## Test
 
