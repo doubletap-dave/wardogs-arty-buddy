@@ -1,3 +1,4 @@
+use std::io::Cursor;
 use std::sync::Arc;
 
 use eframe::egui;
@@ -118,6 +119,24 @@ pub(crate) fn install_style(ctx: &egui::Context) {
             FontId::new(18.0, FontFamily::Monospace),
         );
     });
+}
+
+pub(crate) fn window_icon() -> Arc<egui::IconData> {
+    let dir = ico::IconDir::read(Cursor::new(include_bytes!(
+        "../assets/icons/arty-buddy.ico"
+    )))
+    .expect("window icon");
+    let entry = dir
+        .entries()
+        .iter()
+        .max_by_key(|entry| u32::from(entry.width()) * u32::from(entry.height()))
+        .expect("window icon frame");
+    let image = entry.decode().expect("window icon frame");
+    Arc::new(egui::IconData {
+        rgba: image.rgba_data().to_vec(),
+        width: image.width(),
+        height: image.height(),
+    })
 }
 
 pub(crate) fn stencil(size: f32) -> FontId {

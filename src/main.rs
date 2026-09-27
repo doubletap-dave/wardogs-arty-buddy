@@ -13,7 +13,7 @@ mod wave;
 use eframe::egui;
 
 use app::ArtyBuddy;
-use theme::{TITLE, WINDOW_SIZE};
+use theme::{TITLE, WINDOW_SIZE, window_icon};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -25,7 +25,8 @@ fn main() -> eframe::Result {
             .with_maximize_button(false)
             .with_always_on_top()
             .with_transparent(true)
-            .with_title(TITLE),
+            .with_title(TITLE)
+            .with_icon(window_icon()),
         ..Default::default()
     };
 

@@ -12,13 +12,16 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\..\dist
 OutputBaseFilename=WardogsArtyBuddy-Setup
+SetupIconFile=..\..\assets\icons\arty-buddy.ico
 Compression=lzma2
 SolidCompression=yes
+UninstallDisplayIcon={app}\arty-buddy.ico
 UninstallDisplayName=Wardogs Arty Buddy
 
 [Files]
 Source: "..\..\dist\wardogs-arty-buddy-windows-x86_64.exe"; DestDir: "{app}"; DestName: "wardogs-arty-buddy.exe"
+Source: "..\..\assets\icons\arty-buddy.ico"; DestDir: "{app}"
 Source: "..\..\src\lut\*.bin"; DestDir: "{app}\lut"
 
 [Icons]
-Name: "{autoprograms}\Wardogs Arty Buddy"; Filename: "{app}\wardogs-arty-buddy.exe"
+Name: "{autoprograms}\Wardogs Arty Buddy"; Filename: "{app}\wardogs-arty-buddy.exe"; IconFilename: "{app}\arty-buddy.ico"
