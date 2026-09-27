@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 - 2026-09-26
+
+### Changes
+
+- The Windows release is an installer that includes the program and the map files
+- CLEAR drops the target and leaves the gun and the selected map in place
+
 ## 0.7.1 - 2026-09-26
 
 ### Changes
