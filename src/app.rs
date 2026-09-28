@@ -9,7 +9,7 @@ use crate::range::{ClipUpdate, absorb_wardogs, read_board, update_from_clip};
 use crate::terrain::Map;
 use crate::theme::{self, GUTTER, PAD, WINDOW_SIZE, mono};
 use crate::transparency::hold_transparency;
-use crate::update::UpdateCheck;
+use crate::update::{DownloadedUpdate, UpdateCheck};
 use crate::wave::{paint_chromatic_plate, paint_wave};
 
 pub(crate) struct ArtyBuddy {
@@ -25,6 +25,8 @@ pub(crate) struct ArtyBuddy {
     last_clip_poll: f64,
     clipboard: Option<arboard::Clipboard>,
     update_check: UpdateCheck,
+    pending_update: Option<DownloadedUpdate>,
+    install_at: Option<f64>,
 }
 
 impl ArtyBuddy {
@@ -45,6 +47,8 @@ impl ArtyBuddy {
             last_clip_poll: 0.0,
             clipboard: arboard::Clipboard::new().ok(),
             update_check: UpdateCheck::new(),
+            pending_update: None,
+            install_at: None,
         }
     }
 
@@ -114,6 +118,18 @@ impl ArtyBuddy {
                 {
                     self.clear();
                 }
+                if let Some(update) = &self.pending_update {
+                    let label = if self.install_at.is_some() {
+                        format!("INSTALLING {}", update.version)
+                    } else {
+                        format!("UPDATE {}", update.version)
+                    };
+                    let button =
+                        egui::Button::new(RichText::new(label).font(mono(12.0)).color(ink));
+                    if ui.add(button).clicked() && self.install_at.is_none() {
+                        self.install_at = Some(0.0);
+                    }
+                }
             });
         });
         ui.add_space(6.0);
@@ -153,8 +169,20 @@ impl eframe::App for ArtyBuddy {
             self.last_clip_poll = now;
             self.watch_clipboard();
         }
-        if self.update_check.poll(now) {
-            std::process::exit(0);
+        if let Some(update) = self.update_check.poll(now, self.pending_update.is_some()) {
+            if update.startup {
+                self.install_at = Some(now + 3.0);
+            }
+            self.pending_update = Some(update);
+        }
+        let install_now = self.install_at.is_some_and(|at| now >= at);
+        if install_now {
+            if let Some(update) = self.pending_update.take() {
+                if crate::update::apply(&update.path) {
+                    std::process::exit(0);
+                }
+            }
+            self.install_at = None;
         }
     }
 

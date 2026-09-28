@@ -2,6 +2,14 @@
 
 Range in meters between two map points.
 
+Waiting on a copied coordinate:
+
+![Standby, with the rainbow wave on](assets/screenshots/screen-1.png)
+
+A solved shot. The big number is the flat range, the degrees under it are the compass bearing, and the row above is gun height, target height, and the difference:
+
+![157.27 meters at 039 degrees, with heights](assets/screenshots/screen-2.png)
+
 ```
 meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
@@ -58,7 +66,7 @@ cargo run
 
 Release builds run only when a `v*` tag is pushed. Every push to `main` still runs the tests.
 
-A release build checks GitHub a few seconds after it opens, then about every six hours. On Windows, a newer tag downloads the installer and runs it. On Linux, it replaces the binary. A `cargo run` debug build does not do this.
+A release build checks GitHub when it opens, then about every 15 minutes. An update found at startup is installed after a short notice. An update found while the app is already open shows an **UPDATE** button and waits until you press it. A `cargo run` debug build does not do this.
 
 ## Test
 

@@ -7,49 +7,68 @@ use std::time::Duration;
 
 const LATEST: &str =
     "https://api.github.com/repos/doubletap-dave/wardogs-arty-buddy/releases/latest";
-const CHECK_AFTER_SECS: f64 = 8.0;
-const CHECK_EVERY_SECS: f64 = 6.0 * 60.0 * 60.0;
+const CHECK_AFTER_SECS: f64 = 1.0;
+const CHECK_EVERY_SECS: f64 = 15.0 * 60.0;
+
+pub(crate) struct DownloadedUpdate {
+    pub version: String,
+    pub path: PathBuf,
+    pub startup: bool,
+}
+
+struct FetchedUpdate {
+    version: String,
+    path: PathBuf,
+}
 
 pub(crate) struct UpdateCheck {
-    job: Option<JoinHandle<Option<PathBuf>>>,
+    job: Option<JoinHandle<Option<FetchedUpdate>>>,
+    job_is_startup: bool,
     last_check: f64,
-    started_once: bool,
+    checks_started: u32,
 }
 
 impl UpdateCheck {
     pub(crate) fn new() -> Self {
         Self {
             job: None,
+            job_is_startup: false,
             last_check: 0.0,
-            started_once: false,
+            checks_started: 0,
         }
     }
 
-    /// Returns true when a newer build has been downloaded and a restart is underway.
-    pub(crate) fn poll(&mut self, now: f64) -> bool {
+    /// A finished check that found a newer build. Startup is the first check after launch.
+    pub(crate) fn poll(&mut self, now: f64, paused: bool) -> Option<DownloadedUpdate> {
         if cfg!(debug_assertions) {
-            return false;
+            return None;
         }
-        if self.job.is_none() {
-            let due = if self.started_once {
-                now - self.last_check >= CHECK_EVERY_SECS
-            } else {
+        if self.job.is_none() && !paused {
+            let due = if self.checks_started == 0 {
                 now >= CHECK_AFTER_SECS
+            } else {
+                now - self.last_check >= CHECK_EVERY_SECS
             };
             if due {
-                self.started_once = true;
+                self.job_is_startup = self.checks_started == 0;
+                self.checks_started += 1;
                 self.last_check = now;
                 self.job = Some(thread::spawn(fetch_update));
             }
         }
         let finished = self.job.as_ref().is_some_and(|job| job.is_finished());
         if !finished {
-            return false;
+            return None;
         }
         let job = self.job.take().expect("finished job");
+        let startup = self.job_is_startup;
         match job.join() {
-            Ok(Some(path)) => relaunch(&path),
-            _ => false,
+            Ok(Some(update)) => Some(DownloadedUpdate {
+                version: update.version,
+                path: update.path,
+                startup,
+            }),
+            _ => None,
         }
     }
 }
@@ -62,7 +81,7 @@ fn asset_name() -> &'static str {
     }
 }
 
-fn fetch_update() -> Option<PathBuf> {
+fn fetch_update() -> Option<FetchedUpdate> {
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(120))
         .build();
@@ -80,6 +99,7 @@ fn fetch_update() -> Option<PathBuf> {
     if !is_newer(tag, env!("CARGO_PKG_VERSION")) {
         return None;
     }
+    let version = tag.trim().trim_start_matches('v').to_owned();
     let assets = json.get("assets")?.as_array()?;
     let url = assets.iter().find_map(|asset| {
         let name = asset.get("name")?.as_str()?;
@@ -113,7 +133,10 @@ fn fetch_update() -> Option<PathBuf> {
         let _ = std::fs::remove_file(&dest);
         return None;
     }
-    Some(dest)
+    Some(FetchedUpdate {
+        version,
+        path: dest,
+    })
 }
 
 fn ensure_maps(agent: &ureq::Agent, json: &serde_json::Value) {
@@ -176,7 +199,7 @@ fn parse_version(text: &str) -> Option<[u32; 3]> {
     ])
 }
 
-fn relaunch(downloaded: &Path) -> bool {
+pub(crate) fn apply(downloaded: &Path) -> bool {
     let Ok(current) = std::env::current_exe() else {
         return false;
     };
