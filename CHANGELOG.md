@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 - 2026-10-13
+
+### Features
+
+- Range uses the selected map's elevation and the Paladin (SPH-2) ballistic model so uphill and downhill shots adjust the meters shown
+
+### Fixes
+
+- Switching BAK, OZE, or ZES recalculates the firing range from the new height grid
+- CLEAR resets both OWN and TGT so the next copy can lock a new gun position
+
 ## 0.7.3 - 2026-09-26
 
 ### Changes

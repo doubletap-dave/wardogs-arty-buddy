@@ -29,10 +29,10 @@ The row under the coordinates adds height from a 10 m elevation grid: gun, targe
 
 ## Download
 
-Current release: **[v0.7.3](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.7.3)**
+Current release: **[v0.8.0](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/tag/v0.8.0)**
 
-- [Windows installer](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.7.3/WardogsArtyBuddy-Setup.exe). This is the Windows download. It puts the program and the map files in `%LOCALAPPDATA%\Ghostweasel Labs\Wardogs Arty Buddy` and adds a Start menu shortcut.
-- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.7.3/wardogs-arty-buddy-linux-x86_64)
+- [Windows installer](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.8.0/WardogsArtyBuddy-Setup.exe). This is the Windows download. It puts the program and the map files in `%LOCALAPPDATA%\Ghostweasel Labs\Wardogs Arty Buddy` and adds a Start menu shortcut.
+- [Linux](https://github.com/doubletap-dave/wardogs-arty-buddy/releases/download/v0.8.0/wardogs-arty-buddy-linux-x86_64)
 
 The height grids are not inside the executable. The installer places `lut/bakurani.bin`, `lut/ozeti.bin`, and `lut/zestafona.bin` beside it. A newer Windows release downloads that installer and runs it.
 
