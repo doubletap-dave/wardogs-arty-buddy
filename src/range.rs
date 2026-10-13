@@ -42,6 +42,7 @@ pub struct Fix {
     pub dx: f64,
     pub dy: f64,
     pub grid: f64,
+    pub flat_meters: f64,
     pub meters: f64,
     pub bearing: f64,
 }
@@ -146,7 +147,253 @@ fn take_fixed(text: &str) -> Option<(String, &str)> {
     Some((text[..index].to_owned(), &text[index..]))
 }
 
+const SPH_LOW_TABLE: &[(f64, f64)] = &[
+    (1181.0, 20.0),
+    (1232.0, 30.0),
+    (1283.0, 40.0),
+    (1334.0, 50.0),
+    (1384.0, 60.0),
+    (1433.0, 70.0),
+    (1482.0, 80.0),
+    (1529.0, 90.0),
+    (1576.0, 100.0),
+    (1622.0, 110.0),
+    (1666.0, 120.0),
+    (1709.0, 130.0),
+    (1751.0, 140.0),
+    (1792.0, 150.0),
+    (1832.0, 160.0),
+    (1870.0, 170.0),
+    (1907.0, 180.0),
+    (1944.0, 190.0),
+    (1979.0, 200.0),
+    (2014.0, 210.0),
+    (2046.0, 220.0),
+    (2079.0, 230.0),
+    (2110.0, 240.0),
+    (2139.0, 250.0),
+    (2168.0, 260.0),
+    (2196.0, 270.0),
+    (2223.0, 280.0),
+    (2249.0, 290.0),
+    (2273.0, 300.0),
+    (2296.0, 310.0),
+    (2319.0, 320.0),
+    (2341.0, 330.0),
+    (2362.0, 340.0),
+    (2383.0, 350.0),
+    (2403.0, 360.0),
+    (2422.0, 370.0),
+    (2439.0, 380.0),
+    (2456.0, 390.0),
+    (2471.0, 400.0),
+    (2485.0, 410.0),
+    (2499.0, 420.0),
+    (2513.0, 430.0),
+    (2526.0, 440.0),
+    (2538.0, 450.0),
+    (2550.0, 460.0),
+    (2561.0, 470.0),
+    (2570.0, 480.0),
+    (2579.0, 490.0),
+    (2586.0, 500.0),
+    (2593.0, 510.0),
+    (2599.0, 520.0),
+    (2605.0, 530.0),
+    (2610.0, 540.0),
+    (2615.0, 550.0),
+    (2620.0, 560.0),
+    (2623.0, 570.0),
+    (2626.0, 580.0),
+    (2628.0, 590.0),
+    (2629.0, 600.0),
+];
+
+const GC_X: &[f64] = &[
+    0.0, 30.0, 61.0, 91.0, 122.0, 150.0, 183.0, 213.0, 244.0, 274.0, 300.0, 335.0, 366.0, 396.0,
+    427.0, 450.0, 488.0, 518.0, 549.0, 579.0, 600.0,
+];
+const GC_Y: &[f64] = &[
+    0.71, 0.69, 0.66, 0.64, 0.65, 0.66, 0.68, 0.72, 0.80, 0.92, 1.10, 1.25, 1.33, 1.39, 1.44, 1.48,
+    1.50, 1.54, 1.57, 1.58, 1.60,
+];
+
+const SPH_SPEED: f64 = 300.0;
+const SPH_GRAVITY: f64 = 8.85397505384648;
+const SPH_DRAG: f64 = 0.0007351626163587786;
+const SPH_OFFSET: f64 = 95.03019643400405;
+
+fn drag_coefficient(speed: f64) -> f64 {
+    if speed <= GC_X[0] {
+        return GC_Y[0];
+    }
+    let last = GC_X.len() - 1;
+    if speed >= GC_X[last] {
+        return GC_Y[last];
+    }
+    let mut lo = 0;
+    let mut hi = last;
+    while lo + 1 < hi {
+        let mid = (lo + hi) >> 1;
+        if GC_X[mid] <= speed {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    let fraction = (speed - GC_X[lo]) / (GC_X[hi] - GC_X[lo]);
+    GC_Y[lo] + (GC_Y[hi] - GC_Y[lo]) * fraction
+}
+
+fn drag_factor(vx: f64, vz: f64) -> f64 {
+    let speed = vx.hypot(vz);
+    SPH_DRAG * drag_coefficient(speed) * speed
+}
+
+fn height_at_distance(angle: f64, distance: f64) -> Option<f64> {
+    if !angle.is_finite() || angle <= -0.5 || angle >= 1.55 || !distance.is_finite() || distance <= 0.0 {
+        return None;
+    }
+    let dt = 0.02;
+    let mut x = 0.0;
+    let mut z = 0.0;
+    let mut vx = SPH_SPEED * angle.cos();
+    let mut vz = SPH_SPEED * angle.sin();
+    for _ in 0..6000 {
+        let q1 = drag_factor(vx, vz);
+        let (a1x, a1z) = (-q1 * vx, -SPH_GRAVITY - q1 * vz);
+        let (v2x, v2z) = (vx + a1x * dt * 0.5, vz + a1z * dt * 0.5);
+        let q2 = drag_factor(v2x, v2z);
+        let (a2x, a2z) = (-q2 * v2x, -SPH_GRAVITY - q2 * v2z);
+        let (v3x, v3z) = (vx + a2x * dt * 0.5, vz + a2z * dt * 0.5);
+        let q3 = drag_factor(v3x, v3z);
+        let (a3x, a3z) = (-q3 * v3x, -SPH_GRAVITY - q3 * v3z);
+        let (v4x, v4z) = (vx + a3x * dt, vz + a3z * dt);
+        let q4 = drag_factor(v4x, v4z);
+
+        let next_x = x + dt * (vx + 2.0 * v2x + 2.0 * v3x + v4x) / 6.0;
+        let next_z = z + dt * (vz + 2.0 * v2z + 2.0 * v3z + v4z) / 6.0;
+        if !next_x.is_finite() || !next_z.is_finite() || !v4x.is_finite() || !v4z.is_finite() {
+            return None;
+        }
+        if next_x >= distance {
+            return Some(z + (next_z - z) * (distance - x) / (next_x - x) + SPH_OFFSET);
+        }
+        vx += dt * (a1x + 2.0 * a2x + 2.0 * a3x - q4 * v4x) / 6.0;
+        vz += dt * (a1z + 2.0 * a2z + 2.0 * a3z - SPH_GRAVITY - q4 * v4z) / 6.0;
+        x = next_x;
+        z = next_z;
+        if vx <= 1e-7 {
+            return None;
+        }
+    }
+    None
+}
+
+fn bisect(mut left: f64, mut right: f64, tol: f64, f: impl Fn(f64) -> Option<f64>) -> Option<f64> {
+    let mut fl = f(left)?;
+    let fr = f(right)?;
+    if fl * fr > 0.0 {
+        return None;
+    }
+    if fl.abs() < 1e-8 {
+        return Some(left);
+    }
+    if fr.abs() < 1e-8 {
+        return Some(right);
+    }
+    for _ in 0..40 {
+        if right - left <= tol {
+            break;
+        }
+        let mid = (left + right) * 0.5;
+        let fm = f(mid)?;
+        if fm.abs() < 1e-8 {
+            return Some(mid);
+        }
+        if fl * fm <= 0.0 {
+            right = mid;
+        } else {
+            left = mid;
+            fl = fm;
+        }
+    }
+    Some((left + right) * 0.5)
+}
+
+fn dist_to_flat_mil(distance: f64) -> Option<f64> {
+    if distance < SPH_LOW_TABLE[0].0 {
+        let (d0, m0) = SPH_LOW_TABLE[0];
+        let (d1, m1) = SPH_LOW_TABLE[1];
+        return Some(m0 + (distance - d0) * (m1 - m0) / (d1 - d0));
+    }
+    for window in SPH_LOW_TABLE.windows(2) {
+        let (d0, m0) = window[0];
+        let (d1, m1) = window[1];
+        if distance >= d0 && distance <= d1 {
+            let t = (distance - d0) / (d1 - d0);
+            return Some(m0 + t * (m1 - m0));
+        }
+    }
+    None
+}
+
+fn mil_to_flat_dist(mil: f64) -> Option<f64> {
+    if mil < SPH_LOW_TABLE[0].1 {
+        let (d0, m0) = SPH_LOW_TABLE[0];
+        let (d1, m1) = SPH_LOW_TABLE[1];
+        return Some((d0 + (mil - m0) * (d1 - d0) / (m1 - m0)).max(0.0));
+    }
+    for window in SPH_LOW_TABLE.windows(2) {
+        let (d0, m0) = window[0];
+        let (d1, m1) = window[1];
+        if mil >= m0 && mil <= m1 {
+            let t = (mil - m0) / (m1 - m0);
+            return Some(d0 + t * (d1 - d0));
+        }
+    }
+    None
+}
+
+/// Terrain-adjusted effective firing distance in meters for a given flat range and DZ (target - gun).
+pub fn ballistic_range_meters(flat_meters: f64, dz_meters: f64) -> f64 {
+    if !flat_meters.is_finite() || !dz_meters.is_finite() || dz_meters.abs() < 1e-6 || flat_meters <= 0.0 {
+        return flat_meters;
+    }
+    let Some(flat_mil) = dist_to_flat_mil(flat_meters) else {
+        return (flat_meters + dz_meters).max(0.0);
+    };
+    let center = flat_mil / 1000.0;
+    let ref_angle = bisect(
+        (center - 0.08).max(-0.35),
+        (center + 0.08).min(0.61),
+        1e-7,
+        |a| height_at_distance(a, flat_meters),
+    )
+    .unwrap_or(center);
+
+    let cmd_mil = bisect(-300.0, 600.0, 0.025, |cmd| {
+        let angle = ref_angle + (cmd - flat_mil) / 1000.0;
+        Some(height_at_distance(angle, flat_meters)? - dz_meters)
+    });
+
+    cmd_mil
+        .and_then(mil_to_flat_dist)
+        .unwrap_or_else(|| (flat_meters + dz_meters).max(0.0))
+}
+
+#[cfg(test)]
 pub fn read_board(you_x: &str, you_y: &str, enemy_x: &str, enemy_y: &str) -> BoardRead {
+    read_board_with_dz(you_x, you_y, enemy_x, enemy_y, None)
+}
+
+pub fn read_board_with_dz(
+    you_x: &str,
+    you_y: &str,
+    enemy_x: &str,
+    enemy_y: &str,
+    dz: Option<f64>,
+) -> BoardRead {
     let fields = [
         (CoordField::YouX, you_x),
         (CoordField::YouY, you_y),
@@ -177,11 +424,14 @@ pub fn read_board(you_x: &str, you_y: &str, enemy_x: &str, enemy_y: &str) -> Boa
 
     let dx = parsed[2] - parsed[0];
     let dy = parsed[3] - parsed[1];
+    let flat_meters = range_meters(parsed[0], parsed[1], parsed[2], parsed[3]);
+    let meters = dz.map_or(flat_meters, |dz| ballistic_range_meters(flat_meters, dz));
     BoardRead::Ready(Fix {
         dx,
         dy,
         grid: dx.hypot(dy),
-        meters: range_meters(parsed[0], parsed[1], parsed[2], parsed[3]),
+        flat_meters,
+        meters,
         bearing: bearing_degrees(dx, dy),
     })
 }
@@ -355,6 +605,42 @@ mod tests {
         absorb_wardogs(&mut enemy_x, &mut enemy_y);
         match read_board(&you_x, &you_y, &enemy_x, &enemy_y) {
             BoardRead::Ready(fix) => close(fix.meters, 500.0),
+            other => panic!("expected a fix, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ballistic_range_preserves_flat_distance_when_dz_is_zero() {
+        close(ballistic_range_meters(1400.0, 0.0), 1400.0);
+        close(ballistic_range_meters(500.0, 0.0), 500.0);
+    }
+
+    #[test]
+    fn paladin_ballistic_range_compensates_uphill_and_downhill_shots() {
+        let uphill = ballistic_range_meters(1400.0, 40.0);
+        let downhill = ballistic_range_meters(1400.0, -40.0);
+        // At 1400m on the Paladin (SPH-2), +40m DZ adds ~139m and -40m DZ subtracts ~145m.
+        assert!(
+            (uphill - 1539.4).abs() < 2.0,
+            "expected uphill ~1539.4m, got {uphill}"
+        );
+        assert!(
+            (downhill - 1254.9).abs() < 2.0,
+            "expected downhill ~1254.9m, got {downhill}"
+        );
+    }
+
+    #[test]
+    fn read_board_with_dz_adjusts_meters_and_keeps_flat_meters() {
+        match read_board_with_dz("0", "0", "0", "14", Some(-40.0)) {
+            BoardRead::Ready(fix) => {
+                close(fix.flat_meters, 1400.0);
+                assert!(
+                    (fix.meters - 1254.9).abs() < 2.0,
+                    "expected ~1254.9m, got {}",
+                    fix.meters
+                );
+            }
             other => panic!("expected a fix, got {other:?}"),
         }
     }

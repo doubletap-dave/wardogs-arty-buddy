@@ -5,8 +5,8 @@ use egui::{Align, Color32, Frame, Layout, Margin, RichText, ViewportCommand};
 
 use crate::hud::{range_well, readout};
 use crate::ink::{Ink, ink_squares};
-use crate::range::{ClipUpdate, absorb_wardogs, read_board, update_from_clip};
-use crate::terrain::Map;
+use crate::range::{ClipUpdate, absorb_wardogs, read_board_with_dz, update_from_clip};
+use crate::terrain::{self, Map};
 use crate::theme::{self, GUTTER, PAD, WINDOW_SIZE, mono};
 use crate::transparency::hold_transparency;
 use crate::update::{DownloadedUpdate, UpdateCheck};
@@ -100,9 +100,19 @@ impl ArtyBuddy {
     }
 
     fn clear(&mut self) {
+        self.you_x.clear();
+        self.you_y.clear();
         self.enemy_x.clear();
         self.enemy_y.clear();
+        self.own_locked = false;
         self.last_clip.clear();
+    }
+
+    fn solve_board(&self) -> crate::range::BoardRead {
+        let gun = terrain::elevation_of(self.map, &self.you_x, &self.you_y);
+        let target = terrain::elevation_of(self.map, &self.enemy_x, &self.enemy_y);
+        let dz = gun.zip(target).map(|(g, t)| t - g);
+        read_board_with_dz(&self.you_x, &self.you_y, &self.enemy_x, &self.enemy_y, dz)
     }
 
     fn hud(&mut self, ui: &mut egui::Ui, reading: &crate::range::BoardRead) {
@@ -191,7 +201,7 @@ impl eframe::App for ArtyBuddy {
         self.sync_window(ui.ctx());
         absorb_wardogs(&mut self.you_x, &mut self.you_y);
         absorb_wardogs(&mut self.enemy_x, &mut self.enemy_y);
-        let reading = read_board(&self.you_x, &self.you_y, &self.enemy_x, &self.enemy_y);
+        let reading = self.solve_board();
         let palette = self.ink.palette();
         let phase = (ui.input(|input| input.time) as f32 / 6.5).fract();
         if let Some(palette) = palette {
@@ -221,5 +231,84 @@ impl eframe::App for ArtyBuddy {
                 8.0,
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::range::BoardRead;
+
+    fn test_app() -> ArtyBuddy {
+        ArtyBuddy {
+            you_x: String::new(),
+            you_y: String::new(),
+            enemy_x: String::new(),
+            enemy_y: String::new(),
+            ink: Ink::Green,
+            map: Map::Bakurani,
+            locked_ppp: 0.0,
+            own_locked: false,
+            last_clip: String::new(),
+            last_clip_poll: 0.0,
+            clipboard: None,
+            update_check: UpdateCheck::new(),
+            pending_update: None,
+            install_at: None,
+        }
+    }
+
+    #[test]
+    fn clear_resets_both_own_and_target_and_unlocks_own() {
+        let mut app = test_app();
+        app.you_x = "94.32".into();
+        app.you_y = "108.68".into();
+        app.enemy_x = "88.63".into();
+        app.enemy_y = "99.76".into();
+        app.own_locked = true;
+        app.last_clip = "x88.63, y99.76".into();
+
+        app.clear();
+
+        assert!(app.you_x.is_empty(), "you_x should be cleared");
+        assert!(app.you_y.is_empty(), "you_y should be cleared");
+        assert!(app.enemy_x.is_empty(), "enemy_x should be cleared");
+        assert!(app.enemy_y.is_empty(), "enemy_y should be cleared");
+        assert!(!app.own_locked, "own_locked should be reset to false");
+        assert!(app.last_clip.is_empty(), "last_clip should be cleared");
+    }
+
+    #[test]
+    fn switching_map_recalculates_effective_range_using_map_elevation() {
+        let mut app = test_app();
+        app.you_x = "94.32".into();
+        app.you_y = "108.68".into();
+        app.enemy_x = "88.63".into();
+        app.enemy_y = "99.76".into();
+
+        app.map = Map::Bakurani;
+        let bak_fix = match app.solve_board() {
+            BoardRead::Ready(fix) => fix,
+            other => panic!("expected Ready on Bakurani, got {other:?}"),
+        };
+
+        app.map = Map::Ozeti;
+        let oze_fix = match app.solve_board() {
+            BoardRead::Ready(fix) => fix,
+            other => panic!("expected Ready on Ozeti, got {other:?}"),
+        };
+
+        assert!(
+            (bak_fix.meters - bak_fix.flat_meters).abs() > 10.0,
+            "expected elevation-adjusted range to differ from flat range ({}), got {}",
+            bak_fix.flat_meters,
+            bak_fix.meters
+        );
+        assert!(
+            (bak_fix.meters - oze_fix.meters).abs() > 1.0,
+            "switching map from Bakurani ({}) to Ozeti ({}) should recalculate range",
+            bak_fix.meters,
+            oze_fix.meters
+        );
     }
 }

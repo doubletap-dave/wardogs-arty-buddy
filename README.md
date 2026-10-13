@@ -6,12 +6,12 @@ Waiting on a copied coordinate:
 
 ![Standby, with the rainbow wave on](assets/screenshots/screen-1.png)
 
-A solved shot. The big number is the flat range, the degrees under it are the compass bearing, and the row above is gun height, target height, and the difference:
+A solved shot. The big number is the terrain-adjusted firing range, the degrees under it are the compass bearing, and the row above is gun height, target height, and the difference:
 
 ![157.27 meters at 039 degrees, with heights](assets/screenshots/screen-2.png)
 
 ```
-meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
+flat_meters = 100 × √((enemy X − your X)² + (enemy Y − your Y)²)
 ```
 
 The bearing under that number is the compass azimuth. **+Y is north, +X is east**, and degrees run clockwise from north, the same as the strip in game: 0° north, 90° east, 180° south, 270° west.
@@ -25,7 +25,7 @@ azimuth = degrees wrapped into 0–360
 
 `atan2` is called with `dx` first so 0° points north and the angle increases clockwise. The app rounds that to the nearest degree and prints three digits, so east is `090°`.
 
-That number is flat ground distance. The row under the coordinates adds height from a 10 m elevation grid: gun, target, and DZ (target minus gun). Pick the map under the range box (BAK, OZE, ZES). Heights are meters above the lowest ground on that map, not sea level. A point past the surveyed edge, mostly a thin strip on Ozeti, shows a dash. The grids come from community terrain data published by [wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator).
+The row under the coordinates adds height from a 10 m elevation grid: gun, target, and DZ (target minus gun). Pick the map under the range box (BAK, OZE, ZES); the range readout adjusts for the height difference on the selected map using the Paladin (SPH-2) ballistic trajectory. Heights are meters above the lowest ground on that map, not sea level. A point past the surveyed edge, mostly a thin strip on Ozeti, shows a dash and falls back to flat ground distance. The grids come from community terrain data published by [wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator).
 
 ## Download
 
@@ -54,7 +54,7 @@ It watches the clipboard.
 4. Right-click the place you want to shoot, get coordinates, then Ctrl+A and Ctrl+C again.
 5. That copy fills **TGT** only. The range updates, shown as `500m`, with the compass bearing centered under it (`090°` is east). The height row shows gun, target, and DZ.
 6. Keep copying new targets the same way. **OWN** does not move.
-7. Click **CLEAR** to drop the target. The gun and the selected map stay put.
+7. Click **CLEAR** to reset **OWN** and **TGT** when you move to a new gun position. The selected map stays put.
 
 A copied point looks like `x12.34, y56.78`. After the board accepts it, the clipboard is cleared, so a missed copy does not apply the same point twice. Copy the next point with Ctrl+A, Ctrl+C.
 
